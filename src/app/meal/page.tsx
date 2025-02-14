@@ -1,6 +1,6 @@
 'use client'
 
-import { useEffect, useState, useRef } from 'react'
+import { useEffect, useState, useRef, useCallback } from 'react'
 import { supabase } from '@/lib/supabase'
 import Header from '@/components/Header'
 import { ChevronLeftIcon, ChevronRightIcon, PlusIcon } from '@radix-ui/react-icons'
@@ -23,6 +23,35 @@ export default function MealPage() {
   const [isCreatine, setIsCreatine] = useState(false)
   const formRef = useRef<HTMLFormElement>(null)
 
+  const fetchFoods = useCallback(async () => {
+    try {
+      setLoading(true)
+      const startOfDay = new Date(selectedDate)
+      startOfDay.setHours(0, 0, 0, 0)
+      
+      const endOfDay = new Date(selectedDate)
+      endOfDay.setHours(23, 59, 59, 999)
+
+      const { data, error: fetchError } = await supabase
+        .from('meal')
+        .select('*')
+        .gte('created_at', startOfDay.toISOString())
+        .lte('created_at', endOfDay.toISOString())
+        .order('created_at', { ascending: false })
+
+      if (fetchError) throw fetchError
+      setFoods(data || [])
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Failed to fetch foods')
+    } finally {
+      setLoading(false)
+    }
+  }, [selectedDate])
+
+  useEffect(() => {
+    fetchFoods()
+  }, [fetchFoods])
+
   // Calculate total protein for the selected date
   const totalProtein = foods
     .filter(food => {
@@ -36,35 +65,6 @@ export default function MealPage() {
     food.is_creatine && 
     new Date(food.created_at).toDateString() === selectedDate.toDateString()
   )
-
-  useEffect(() => {
-    fetchFoods()
-  }, [selectedDate])
-
-  async function fetchFoods() {
-    try {
-      setLoading(true)
-      const startOfDay = new Date(selectedDate)
-      startOfDay.setHours(0, 0, 0, 0)
-      
-      const endOfDay = new Date(selectedDate)
-      endOfDay.setHours(23, 59, 59, 999)
-
-      const { data, error } = await supabase
-        .from('meal')
-        .select('*')
-        .gte('created_at', startOfDay.toISOString())
-        .lte('created_at', endOfDay.toISOString())
-        .order('created_at', { ascending: false })
-
-      if (error) throw error
-      setFoods(data || [])
-    } catch (err) {
-      setError(err instanceof Error ? err.message : 'Failed to fetch foods')
-    } finally {
-      setLoading(false)
-    }
-  }
 
   const handleAddFood = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault()

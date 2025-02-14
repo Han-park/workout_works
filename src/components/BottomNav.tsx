@@ -2,7 +2,7 @@
 
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
-import { BarChartIcon, CountdownTimerIcon, DashboardIcon, MoveIcon, PersonIcon } from '@radix-ui/react-icons'
+import { BarChartIcon, CountdownTimerIcon, MoveIcon } from '@radix-ui/react-icons'
 
 export default function BottomNav() {
   const pathname = usePathname()

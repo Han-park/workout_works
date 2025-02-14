@@ -62,6 +62,11 @@ const calculateMovingAverage = (data: number[], windowSize: number = 3) => {
   return result;
 };
 
+interface LegendItem {
+  text: string;
+  [key: string]: any;
+}
+
 export default function GraphPage() {
   const [metrics, setMetrics] = useState<Metric[]>([])
   const [loading, setLoading] = useState(true)
@@ -178,7 +183,7 @@ export default function GraphPage() {
             size: 12
           },
           padding: 10,
-          filter: (item: any) => !item.text.includes('Trend') // Hide trend lines from legend
+          filter: (item: LegendItem) => !item.text.includes('Trend')
         }
       },
       title: {
