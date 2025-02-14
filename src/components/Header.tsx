@@ -11,13 +11,16 @@ export default function Header({ onAddClick }: HeaderProps) {
 
   return (
     <div className="w-full flex justify-between items-center p-4 bg-black">
-      <Image
-        src="/WW.png"
-        alt="Workout Works Logo"
-        width={40}
-        height={40}
-        className="object-contain"
-      />
+      <div className="relative w-[40px] h-[40px]">
+        <Image
+          src="/WW.png"
+          alt="Workout Works Logo"
+          fill
+          sizes="40px"
+          className="object-contain"
+          priority
+        />
+      </div>
       {showAddButton && onAddClick && (
         <button
           onClick={onAddClick}

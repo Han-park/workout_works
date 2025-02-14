@@ -11,7 +11,7 @@ interface Food {
   food_name: string
   weight: number
   protein_content: number
-  is_creatine: boolean
+  creatine: boolean
 }
 
 export default function MealPage() {
@@ -55,15 +55,24 @@ export default function MealPage() {
   const totalProtein = foods
     .filter(food => {
       const foodDate = new Date(food.created_at)
-      return foodDate.toDateString() === selectedDate.toDateString()
+      const selectedDateStart = new Date(selectedDate)
+      selectedDateStart.setHours(0, 0, 0, 0)
+      const selectedDateEnd = new Date(selectedDate)
+      selectedDateEnd.setHours(23, 59, 59, 999)
+      return foodDate >= selectedDateStart && foodDate <= selectedDateEnd
     })
     .reduce((sum, food) => sum + food.protein_content, 0)
 
   // Check if creatine was taken on the selected date
-  const creatineTaken = foods.some(food => 
-    food.is_creatine && 
-    new Date(food.created_at).toDateString() === selectedDate.toDateString()
-  )
+  const creatineTaken = foods.some(food => {
+    if (!food.creatine) return false
+    const foodDate = new Date(food.created_at)
+    const selectedDateStart = new Date(selectedDate)
+    selectedDateStart.setHours(0, 0, 0, 0)
+    const selectedDateEnd = new Date(selectedDate)
+    selectedDateEnd.setHours(23, 59, 59, 999)
+    return foodDate >= selectedDateStart && foodDate <= selectedDateEnd
+  })
 
   const handleAddFood = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault()
@@ -97,7 +106,7 @@ export default function MealPage() {
           food_name: foodName,
           weight: isCreatine ? 5 : Number(weight),
           protein_content: isCreatine ? 0 : Number(proteinContent),
-          is_creatine: isCreatine
+          creatine: isCreatine
         }])
         .select()
 
@@ -240,7 +249,7 @@ export default function MealPage() {
                 <h3 className="font-medium text-white/90">{food.food_name}</h3>
                 <p className="text-sm text-white/50">
                   {food.weight}g
-                  {!food.is_creatine && ` • ${food.protein_content}g protein`}
+                  {!food.creatine && ` • ${food.protein_content}g protein`}
                 </p>
               </div>
               <span className="text-sm text-white/30">

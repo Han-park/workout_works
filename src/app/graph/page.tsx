@@ -280,15 +280,18 @@ export default function GraphPage() {
   }
 
   const handleAddMetric = async (e: React.FormEvent<HTMLFormElement>) => {
+
+    
     e.preventDefault()
     setInputError(null)
 
     const formData = new FormData(e.currentTarget)
     const muscleMass = formData.get('muscleMass')
     const bodyFat = formData.get('bodyFat')
-
+    const creatineTaken = formData.get('creatineTaken')
+    
     // Validate inputs
-    if (!muscleMass || !bodyFat) {
+    if (!muscleMass || !bodyFat || !creatineTaken) {
       setInputError('Please fill in all fields')
       return
     }
@@ -316,6 +319,7 @@ export default function GraphPage() {
       if (insertError) throw insertError
 
       console.log(data); // Log the added metric data
+      console.log(creatineTaken); // Log the creatineTaken value
 
       // Add new metric to state and sort
       const newMetrics = [...metrics, data[0]].sort((a, b) => 
@@ -350,6 +354,7 @@ export default function GraphPage() {
   }
 
   return (
+    
     <div className="min-h-screen bg-black text-white flex flex-col">
       <Header onAddClick={() => dialogRef.current?.showModal()} />
       <div className="flex-1 p-8">
