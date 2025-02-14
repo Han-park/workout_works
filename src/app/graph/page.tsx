@@ -11,7 +11,8 @@ import {
   LineElement,
   Title,
   Tooltip,
-  Legend
+  Legend,
+  type LegendItem
 } from 'chart.js'
 import { Line } from 'react-chartjs-2'
 
@@ -60,12 +61,6 @@ const calculateMovingAverage = (data: number[], windowSize: number = 3) => {
   }
   return result;
 };
-
-interface LegendItem {
-  text: string;
-  hidden?: boolean;
-  [key: string]: any;
-}
 
 export default function GraphPage() {
   const [metrics, setMetrics] = useState<Metric[]>([])
@@ -183,7 +178,7 @@ export default function GraphPage() {
             size: 12
           },
           padding: 10,
-          filter: (item: LegendItem) => !item.text.includes('Trend')
+          filter: (item: LegendItem) => !item.text?.includes('Trend')
         }
       },
       title: {
