@@ -3,7 +3,6 @@
 import { useEffect, useState, useRef } from 'react'
 import { supabase } from '@/lib/supabase'
 import Header from '@/components/Header'
-import Image from 'next/image'
 import {
   Chart as ChartJS,
   CategoryScale,
@@ -64,6 +63,7 @@ const calculateMovingAverage = (data: number[], windowSize: number = 3) => {
 
 interface LegendItem {
   text: string;
+  hidden?: boolean;
   [key: string]: any;
 }
 

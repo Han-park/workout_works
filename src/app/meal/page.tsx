@@ -18,7 +18,6 @@ export default function MealPage() {
   const [selectedDate, setSelectedDate] = useState(new Date())
   const [foods, setFoods] = useState<Food[]>([])
   const [loading, setLoading] = useState(true)
-  const [error, setError] = useState<string | null>(null)
   const [inputError, setInputError] = useState<string | null>(null)
   const [isCreatine, setIsCreatine] = useState(false)
   const formRef = useRef<HTMLFormElement>(null)
@@ -42,7 +41,7 @@ export default function MealPage() {
       if (fetchError) throw fetchError
       setFoods(data || [])
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Failed to fetch foods')
+      console.error('Failed to fetch foods:', err)
     } finally {
       setLoading(false)
     }
