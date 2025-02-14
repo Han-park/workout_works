@@ -2,6 +2,7 @@
 
 import { useEffect, useState, useRef } from 'react'
 import { supabase } from '@/lib/supabase'
+import Header from '@/components/Header'
 import Image from 'next/image'
 import {
   Chart as ChartJS,
@@ -42,6 +43,24 @@ const COLORS = {
   secondary: '#FFFFFF',
   neutral: '#D9D9D9'
 }
+
+const calculateMovingAverage = (data: number[], windowSize: number = 3) => {
+  const result: number[] = [];
+  for (let i = 0; i < data.length; i++) {
+    let sum = 0;
+    let count = 0;
+    
+    // Look back and forward windowSize/2 points
+    for (let j = Math.max(0, i - Math.floor(windowSize/2)); 
+         j < Math.min(data.length, i + Math.floor(windowSize/2) + 1); 
+         j++) {
+      sum += data[j];
+      count++;
+    }
+    result.push(sum / count);
+  }
+  return result;
+};
 
 export default function GraphPage() {
   const [metrics, setMetrics] = useState<Metric[]>([])
@@ -118,6 +137,26 @@ export default function GraphPage() {
         pointRadius: 0,
         yAxisID: 'y1',
         tension: 0,
+      },
+      {
+        label: 'Muscle Mass Trend',
+        data: calculateMovingAverage(metrics.map(metric => metric.skeletal_muscle_mass)),
+        borderColor: COLORS.primary,
+        borderWidth: 2,
+        pointRadius: 0,
+        yAxisID: 'y',
+        tension: 0.4,
+        borderDash: [2, 2],
+      },
+      {
+        label: 'Body Fat Trend',
+        data: calculateMovingAverage(metrics.map(metric => metric.percent_body_fat)),
+        borderColor: COLORS.secondary,
+        borderWidth: 2,
+        pointRadius: 0,
+        yAxisID: 'y1',
+        tension: 0.4,
+        borderDash: [2, 2],
       }
     ]
   }
@@ -138,7 +177,8 @@ export default function GraphPage() {
             family: 'Inter, system-ui, sans-serif',
             size: 12
           },
-          padding: 10
+          padding: 10,
+          filter: (item: any) => !item.text.includes('Trend') // Hide trend lines from legend
         }
       },
       title: {
@@ -310,24 +350,61 @@ export default function GraphPage() {
   }
 
   return (
-    <div className="min-h-screen p-8 bg-black text-white">
-      <div className="flex items-center justify-between gap-4 mb-6">
-        <div className="flex items-center gap-4">
-          <Image
-            src="/WW.png"
-            alt="Workout Works Logo"
-            width={50}
-            height={50}
-            className="object-contain"
-          />
-          <h1 className="text-3xl font-light text-white text-opacity-50">Workout Works: Han</h1>
+    <div className="min-h-screen bg-black text-white flex flex-col">
+      <Header onAddClick={() => dialogRef.current?.showModal()} />
+      <div className="flex-1 p-8">
+        <div className="bg-[#111111] rounded-lg shadow-2xl p-6 border border-gray-800">
+          <div className="w-full h-[400px]">
+            <Line options={options} data={chartData} />
+          </div>
         </div>
-        <button
-          onClick={() => dialogRef.current?.showModal()}
-          className="px-4 py-2 border border-[#D8110A]/50 bg-white/10 text-white/60 rounded-lg hover:bg-opacity-90 transition-colors"
-        >
-          Add Data
-        </button>
+        
+        {/* Data Table */}
+        <div className="mt-8 mb-8 bg-[#111111] rounded-lg shadow-2xl border border-gray-800">
+          <div className="overflow-x-auto">
+            <table className="min-w-full divide-y divide-gray-800">
+              <thead className="bg-[#1a1a1a]">
+                <tr>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-[#D9D9D9] uppercase tracking-wider">
+                    Date
+                  </th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-[#D9D9D9] uppercase tracking-wider">
+                    Skeletal Muscle Mass (kg)
+                  </th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-[#D9D9D9] uppercase tracking-wider">
+                    Body Fat (%)
+                  </th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-gray-800">
+                <tr className="bg-[#1a1a1a]">
+                  <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-[#D9D9D9]">
+                    Goal
+                  </td>
+                  <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-[#D8110A]">
+                    {GOALS.muscle_mass}
+                  </td>
+                  <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-white">
+                    {GOALS.body_fat}
+                  </td>
+                </tr>
+                {metrics.map((metric, index) => (
+                  <tr key={metric.id} className={index % 2 === 0 ? 'bg-[#1a1a1a]' : 'bg-[#111111]'}>
+                    <td className="px-6 py-4 whitespace-nowrap text-sm text-[#D9D9D9]">
+                      {new Date(metric.created_at).toLocaleDateString()}
+                    </td>
+                    <td className="px-6 py-4 whitespace-nowrap text-sm text-[#D8110A]">
+                      {metric.skeletal_muscle_mass}
+                    </td>
+                    <td className="px-6 py-4 whitespace-nowrap text-sm text-white">
+                      {metric.percent_body_fat}
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        </div>
       </div>
 
       {/* Metric Input Dialog */}
@@ -336,7 +413,7 @@ export default function GraphPage() {
         className="p-0 bg-[#111111] text-white rounded-lg backdrop:bg-black backdrop:bg-opacity-50"
         onClick={(e) => {
           if (e.target === dialogRef.current) {
-            dialogRef.current?.close()
+            dialogRef.current.close()
           }
         }}
       >
@@ -397,59 +474,6 @@ export default function GraphPage() {
           </form>
         </div>
       </dialog>
-
-      <div className="bg-[#111111] rounded-lg shadow-2xl p-6 border border-gray-800">
-        <div className="w-full h-[400px]">
-          <Line options={options} data={chartData} />
-        </div>
-      </div>
-      
-      {/* Data Table */}
-      <div className="mt-8 bg-[#111111] rounded-lg shadow-2xl border border-gray-800">
-        <div className="overflow-x-auto">
-          <table className="min-w-full divide-y divide-gray-800">
-            <thead className="bg-[#1a1a1a]">
-              <tr>
-                <th className="px-6 py-3 text-left text-xs font-medium text-[#D9D9D9] uppercase tracking-wider">
-                  Date
-                </th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-[#D9D9D9] uppercase tracking-wider">
-                  Skeletal Muscle Mass (kg)
-                </th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-[#D9D9D9] uppercase tracking-wider">
-                  Body Fat (%)
-                </th>
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-gray-800">
-              <tr className="bg-[#1a1a1a]">
-                <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-[#D9D9D9]">
-                  Goal
-                </td>
-                <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-[#D8110A]">
-                  {GOALS.muscle_mass}
-                </td>
-                <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-white">
-                  {GOALS.body_fat}
-                </td>
-              </tr>
-              {metrics.map((metric) => (
-                <tr key={metric.id} className="hover:bg-[#1a1a1a] transition-colors">
-                  <td className="px-6 py-4 whitespace-nowrap text-sm text-[#D9D9D9]">
-                    {new Date(metric.created_at).toLocaleDateString()}
-                  </td>
-                  <td className="px-6 py-4 whitespace-nowrap text-sm text-[#D8110A]">
-                    {metric.skeletal_muscle_mass}
-                  </td>
-                  <td className="px-6 py-4 whitespace-nowrap text-sm text-white">
-                    {metric.percent_body_fat}
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
-      </div>
     </div>
   )
 } 
