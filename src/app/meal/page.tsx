@@ -192,16 +192,16 @@ export default function MealPage() {
 
         {/* Add Food Form */}
         <form ref={formRef} onSubmit={handleAddFood} className="bg-[#111111] p-4 rounded-lg border border-gray-800">
-          <div className="flex gap-2">
+          <div className="flex flex-col gap-3">
             <input
               type="text"
               name="foodName"
               placeholder="Food name (or type 'creatine')"
               onChange={handleFoodNameChange}
-              className="flex-1 px-3 py-2 bg-[#1a1a1a] border border-gray-800 rounded-md text-white focus:outline-none focus:ring-2 focus:ring-[#D8110A]"
+              className="w-full px-3 py-2 bg-[#1a1a1a] border border-gray-800 rounded-md text-white focus:outline-none focus:ring-2 focus:ring-[#D8110A]"
             />
             {isCreatine ? (
-              <div className="w-24 px-3 py-2 bg-[#1a1a1a] border border-gray-800 rounded-md text-white/50">
+              <div className="w-full px-3 py-2 bg-[#1a1a1a] border border-gray-800 rounded-md text-white/50">
                 5g
               </div>
             ) : (
@@ -210,11 +210,11 @@ export default function MealPage() {
                 name="weight"
                 placeholder="Total (g)"
                 step="0.1"
-                className="w-24 px-3 py-2 bg-[#1a1a1a] border border-gray-800 rounded-md text-white focus:outline-none focus:ring-2 focus:ring-[#D8110A] [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
+                className="w-full px-3 py-2 bg-[#1a1a1a] border border-gray-800 rounded-md text-white focus:outline-none focus:ring-2 focus:ring-[#D8110A] [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
               />
             )}
             {isCreatine ? (
-              <div className="w-28 px-3 py-2 bg-[#1a1a1a] border border-gray-800 rounded-md text-white/50">
+              <div className="w-full px-3 py-2 bg-[#1a1a1a] border border-gray-800 rounded-md text-white/50">
                 0g
               </div>
             ) : (
@@ -223,14 +223,15 @@ export default function MealPage() {
                 name="proteinContent"
                 placeholder="Protein (g)"
                 step="0.1"
-                className="w-28 px-3 py-2 bg-[#1a1a1a] border border-gray-800 rounded-md text-white focus:outline-none focus:ring-2 focus:ring-[#D8110A] [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
+                className="w-full px-3 py-2 bg-[#1a1a1a] border border-gray-800 rounded-md text-white focus:outline-none focus:ring-2 focus:ring-[#D8110A] [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
               />
             )}
             <button
               type="submit"
-              className="p-2 bg-[#D8110A] text-white rounded-md hover:bg-opacity-90 transition-colors"
+              className="w-full py-2 bg-[#D8110A] text-white rounded-md hover:bg-opacity-90 transition-colors flex items-center justify-center gap-2"
             >
               <PlusIcon className="w-5 h-5" />
+              <span>Add Food</span>
             </button>
           </div>
           {inputError && (
