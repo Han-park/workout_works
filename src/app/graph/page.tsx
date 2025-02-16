@@ -280,18 +280,15 @@ export default function GraphPage() {
   }
 
   const handleAddMetric = async (e: React.FormEvent<HTMLFormElement>) => {
-
-    
     e.preventDefault()
     setInputError(null)
 
     const formData = new FormData(e.currentTarget)
     const muscleMass = formData.get('muscleMass')
     const bodyFat = formData.get('bodyFat')
-    const creatineTaken = formData.get('creatineTaken')
     
     // Validate inputs
-    if (!muscleMass || !bodyFat || !creatineTaken) {
+    if (!muscleMass || !bodyFat) {
       setInputError('Please fill in all fields')
       return
     }
@@ -318,9 +315,6 @@ export default function GraphPage() {
 
       if (insertError) throw insertError
 
-      console.log(data); // Log the added metric data
-      console.log(creatineTaken); // Log the creatineTaken value
-
       // Add new metric to state and sort
       const newMetrics = [...metrics, data[0]].sort((a, b) => 
         new Date(a.created_at).getTime() - new Date(b.created_at).getTime()
@@ -332,8 +326,6 @@ export default function GraphPage() {
       formRef.current?.reset()
     } catch (err) {
       setInputError(err instanceof Error ? err.message : 'Failed to add data')
-      
-      console.log("now the error occured. the data is:", { muscleValue, fatValue }); // Log the input values when an error occurs
     }
   }
 

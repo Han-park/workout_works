@@ -8,7 +8,7 @@ import { ChevronLeftIcon, ChevronRightIcon, PlusIcon } from '@radix-ui/react-ico
 interface Food {
   id: number
   created_at: string
-  recognized_date: string
+  recognition_date: string
   food_name: string
   weight: number
   protein_content: number
@@ -26,17 +26,12 @@ export default function MealPage() {
   const fetchFoods = useCallback(async () => {
     try {
       setLoading(true)
-      const startOfDay = new Date(selectedDate)
-      startOfDay.setHours(0, 0, 0, 0)
-      
-      const endOfDay = new Date(selectedDate)
-      endOfDay.setHours(23, 59, 59, 999)
+      const selectedDateStr = new Date(selectedDate).toISOString().split('T')[0]
 
       const { data, error: fetchError } = await supabase
         .from('meal')
         .select('*')
-        .gte('recognized_date', startOfDay.toISOString())
-        .lte('recognized_date', endOfDay.toISOString())
+        .eq('recognition_date', selectedDateStr)
         .order('created_at', { ascending: false })
 
       if (fetchError) throw fetchError
@@ -54,27 +49,10 @@ export default function MealPage() {
   }, [fetchFoods])
 
   // Calculate total protein for the selected date
-  const totalProtein = foods
-    .filter(food => {
-      const foodDate = new Date(food.recognized_date)
-      const selectedDateStart = new Date(selectedDate)
-      selectedDateStart.setHours(0, 0, 0, 0)
-      const selectedDateEnd = new Date(selectedDate)
-      selectedDateEnd.setHours(23, 59, 59, 999)
-      return foodDate >= selectedDateStart && foodDate <= selectedDateEnd
-    })
-    .reduce((sum, food) => sum + food.protein_content, 0)
+  const totalProtein = foods.reduce((sum, food) => sum + food.protein_content, 0)
 
   // Check if creatine was taken on the selected date
-  const creatineTaken = foods.some(food => {
-    if (!food.creatine) return false
-    const foodDate = new Date(food.recognized_date)
-    const selectedDateStart = new Date(selectedDate)
-    selectedDateStart.setHours(0, 0, 0, 0)
-    const selectedDateEnd = new Date(selectedDate)
-    selectedDateEnd.setHours(23, 59, 59, 999)
-    return foodDate >= selectedDateStart && foodDate <= selectedDateEnd
-  })
+  const creatineTaken = foods.some(food => food.creatine)
 
   const handleAddFood = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault()
@@ -101,15 +79,14 @@ export default function MealPage() {
     }
 
     try {
-      // Set the start of the selected date as the recognized_date
-      const recognizedDate = new Date(selectedDate)
-      recognizedDate.setHours(0, 0, 0, 0)
+      // Use only the date part of selectedDate for recognition_date
+      const selectedDateStr = new Date(selectedDate).toISOString().split('T')[0]
 
       const { data, error: insertError } = await supabase
         .from('meal')
         .insert([{
           created_at: new Date().toISOString(), // Current time when the record is created
-          recognized_date: recognizedDate.toISOString(), // Selected date for the meal
+          recognition_date: selectedDateStr, // Just the date part of selectedDate
           food_name: foodName,
           weight: isCreatine ? 5 : Number(weight),
           protein_content: isCreatine ? 0 : Number(proteinContent),
