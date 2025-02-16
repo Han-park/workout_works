@@ -8,6 +8,7 @@ import { ChevronLeftIcon, ChevronRightIcon, PlusIcon } from '@radix-ui/react-ico
 interface Food {
   id: number
   created_at: string
+  recognized_date: string
   food_name: string
   weight: number
   protein_content: number
@@ -34,14 +35,15 @@ export default function MealPage() {
       const { data, error: fetchError } = await supabase
         .from('meal')
         .select('*')
-        .gte('created_at', startOfDay.toISOString())
-        .lte('created_at', endOfDay.toISOString())
+        .gte('recognized_date', startOfDay.toISOString())
+        .lte('recognized_date', endOfDay.toISOString())
         .order('created_at', { ascending: false })
 
       if (fetchError) throw fetchError
       setFoods(data || [])
-    } catch (err) {
-      console.error('Failed to fetch foods:', err)
+    } catch (error: unknown) {
+      const errorMessage = error instanceof Error ? error.message : 'Failed to fetch foods'
+      console.error('Failed to fetch foods:', errorMessage)
     } finally {
       setLoading(false)
     }
@@ -54,7 +56,7 @@ export default function MealPage() {
   // Calculate total protein for the selected date
   const totalProtein = foods
     .filter(food => {
-      const foodDate = new Date(food.created_at)
+      const foodDate = new Date(food.recognized_date)
       const selectedDateStart = new Date(selectedDate)
       selectedDateStart.setHours(0, 0, 0, 0)
       const selectedDateEnd = new Date(selectedDate)
@@ -66,7 +68,7 @@ export default function MealPage() {
   // Check if creatine was taken on the selected date
   const creatineTaken = foods.some(food => {
     if (!food.creatine) return false
-    const foodDate = new Date(food.created_at)
+    const foodDate = new Date(food.recognized_date)
     const selectedDateStart = new Date(selectedDate)
     selectedDateStart.setHours(0, 0, 0, 0)
     const selectedDateEnd = new Date(selectedDate)
@@ -99,10 +101,15 @@ export default function MealPage() {
     }
 
     try {
+      // Set the start of the selected date as the recognized_date
+      const recognizedDate = new Date(selectedDate)
+      recognizedDate.setHours(0, 0, 0, 0)
+
       const { data, error: insertError } = await supabase
         .from('meal')
         .insert([{
-          created_at: new Date().toISOString(),
+          created_at: new Date().toISOString(), // Current time when the record is created
+          recognized_date: recognizedDate.toISOString(), // Selected date for the meal
           food_name: foodName,
           weight: isCreatine ? 5 : Number(weight),
           protein_content: isCreatine ? 0 : Number(proteinContent),
