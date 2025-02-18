@@ -11,7 +11,7 @@ interface AuthContextType {
   signInWithEmail: (email: string) => Promise<void>
   signInWithPassword: (email: string, password: string) => Promise<void>
   signOut: () => Promise<void>
-  updateProfile: (data: { display_name: string }) => Promise<void>
+  updateProfile: (data: { display_name?: string, avatar_url?: string }) => Promise<void>
   updatePassword: (password: string) => Promise<void>
   updateGoals: (data: { goal_muscle_mass: number, goal_body_fat: number }) => Promise<void>
 }
@@ -78,7 +78,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     if (error) throw error
   }
 
-  const updateProfile = async (data: { display_name: string }) => {
+  const updateProfile = async (data: { display_name?: string, avatar_url?: string }) => {
     const { error } = await supabase.auth.updateUser({
       data: data
     })

@@ -1,11 +1,14 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import { useAuth } from '@/contexts/AuthContext'
 import { useRouter } from 'next/navigation'
 import Header from '@/components/Header'
-import { LockClosedIcon, TargetIcon } from '@radix-ui/react-icons'
+import { LockClosedIcon, TargetIcon, ImageIcon } from '@radix-ui/react-icons'
 import { supabase } from '@/lib/supabase'
+import Image from 'next/image'
+import { uploadImage } from '@/utils/imageUpload'
+import { createClientComponentClient } from '@supabase/auth-helpers-nextjs'
 
 export default function ProfilePage() {
   const { user, signOut, updateProfile, updatePassword, updateGoals } = useAuth()
@@ -24,6 +27,10 @@ export default function ProfilePage() {
   const [message, setMessage] = useState<string | null>(null)
   const [passwordMessage, setPasswordMessage] = useState<string | null>(null)
   const [goalMessage, setGoalMessage] = useState<string | null>(null)
+  const [avatarUrl, setAvatarUrl] = useState<string | null>(null)
+  const [uploadError, setUploadError] = useState<string | null>(null)
+  const [uploadLoading, setUploadLoading] = useState(false)
+  const fileInputRef = useRef<HTMLInputElement>(null)
 
   useEffect(() => {
     if (!user) {
@@ -57,6 +64,12 @@ export default function ProfilePage() {
   useEffect(() => {
     if (user?.user_metadata) {
       setDisplayName(user.user_metadata.display_name || '')
+    }
+  }, [user])
+
+  useEffect(() => {
+    if (user?.user_metadata?.avatar_url) {
+      setAvatarUrl(user.user_metadata.avatar_url)
     }
   }, [user])
 
@@ -149,6 +162,48 @@ export default function ProfilePage() {
     }
   }
 
+  const handleImageUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0]
+    if (!file || !user) return
+    
+    setUploadError(null)
+    setUploadLoading(true)
+
+    try {
+      // Create authenticated client
+      const supabaseClient = createClientComponentClient()
+      
+      const { publicUrl, error } = await uploadImage({
+        file,
+        userId: user.id,
+        supabase: supabaseClient,
+        previousUrl: avatarUrl
+      })
+
+      if (error) {
+        setUploadError(error)
+        return
+      }
+
+      // Update user metadata with new avatar URL
+      await updateProfile({ 
+        display_name: user.user_metadata?.display_name || '',
+        avatar_url: publicUrl 
+      })
+
+      setAvatarUrl(publicUrl)
+      setMessage('Profile picture updated successfully!')
+    } catch (error) {
+      setUploadError(
+        error instanceof Error 
+          ? error.message 
+          : 'Failed to update profile picture'
+      )
+    } finally {
+      setUploadLoading(false)
+    }
+  }
+
   if (!user) {
     return null
   }
@@ -158,13 +213,56 @@ export default function ProfilePage() {
       <Header />
       <div className="flex-1 flex items-center justify-center p-4">
         <div className="w-full max-w-md space-y-8">
-          <div className="text-center">
-            <h2 className="text-3xl font-bold text-white">
-              {displayName ? displayName : 'Please set a display name'}
-            </h2>
-            <p className="mt-2 text-white/60">
-              {user.email}
-            </p>
+          {/* Profile Picture Section */}
+          <div className="flex flex-col items-center space-y-4">
+            <button
+              type="button"
+              onClick={() => fileInputRef.current?.click()}
+              className="group relative w-32 h-32 rounded-full overflow-hidden border-2 border-gray-800 cursor-pointer hover:border-[#D8110A] transition-colors"
+            >
+              {avatarUrl ? (
+                <>
+                  <Image
+                    src={avatarUrl}
+                    alt="Profile"
+                    fill
+                    className="object-cover"
+                  />
+                  <div className="absolute inset-0 bg-black bg-opacity-50 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity">
+                    <ImageIcon className="w-8 h-8 text-white" />
+                  </div>
+                </>
+              ) : (
+                <div className="w-full h-full bg-[#1a1a1a] flex items-center justify-center group-hover:bg-[#2a2a2a] transition-colors">
+                  <ImageIcon className="w-12 h-12 text-white/30" />
+                </div>
+              )}
+            </button>
+            <input
+              ref={fileInputRef}
+              type="file"
+              accept="image/*"
+              onChange={handleImageUpload}
+              className="hidden"
+            />
+            {uploadLoading && (
+              <p className="text-white/60 text-sm">
+                Uploading...
+              </p>
+            )}
+            {uploadError && (
+              <p className="text-[#D8110A] text-sm text-center">
+                {uploadError}
+              </p>
+            )}
+            <div className="text-center">
+              <h2 className="text-xl font-bold text-white">
+                {displayName ? displayName : 'Please set a display name'}
+              </h2>
+              <p className="mt-1 text-white/60">
+                {user.email}
+              </p>
+            </div>
           </div>
 
           <form onSubmit={handleUpdateProfile} className="mt-8 space-y-6">
@@ -187,7 +285,7 @@ export default function ProfilePage() {
               disabled={loading}
               className="w-full py-2 px-4 bg-[#D8110A] text-white rounded-md hover:bg-opacity-90 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
             >
-              {loading ? 'Updating...' : 'Update Profile'}
+              {loading ? 'Updating...' : 'Change Display Name'}
             </button>
 
             {error && (

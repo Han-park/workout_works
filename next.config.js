@@ -2,6 +2,9 @@
 const MiniCssExtractPlugin = require('mini-css-extract-plugin')
 
 const nextConfig = {
+  images: {
+    domains: ['aanrnidkotzgpaeukxvd.supabase.co']
+  },
   webpack: (config, { isServer }) => {
     if (!isServer) {
       config.plugins.push(
