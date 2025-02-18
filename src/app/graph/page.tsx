@@ -29,13 +29,14 @@ ChartJS.register(
 interface Metric {
   id: number
   created_at: string
+  weight: number | null
   skeletal_muscle_mass: number
   percent_body_fat: number
 }
 
-const GOALS = {
-  muscle_mass: 43,
-  body_fat: 12
+interface Goal {
+  skeletal_muscle_mass: number
+  percent_body_fat: number
 }
 
 const COLORS = {
@@ -64,6 +65,7 @@ const calculateMovingAverage = (data: number[], windowSize: number = 3) => {
 
 export default function GraphPage() {
   const [metrics, setMetrics] = useState<Metric[]>([])
+  const [goals, setGoals] = useState<Goal>({ skeletal_muscle_mass: 0, percent_body_fat: 0 })
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
   const [inputError, setInputError] = useState<string | null>(null)
@@ -71,22 +73,38 @@ export default function GraphPage() {
   const formRef = useRef<HTMLFormElement>(null)
 
   useEffect(() => {
-    async function fetchMetrics() {
+    async function fetchData() {
       try {
-        const { data, error } = await supabase
+        // Fetch metrics
+        const { data: metricsData, error: metricsError } = await supabase
           .from('metric')
           .select('*')
         
-        if (error) {
-          throw error
+        if (metricsError) {
+          throw metricsError
         }
 
-        // Sort the data by created_at
-        const sortedData = [...(data || [])].sort((a, b) => 
+        // Sort the metrics data
+        const sortedData = [...(metricsData || [])].sort((a, b) => 
           new Date(a.created_at).getTime() - new Date(b.created_at).getTime()
         );
 
         setMetrics(sortedData)
+
+        // Fetch latest goal
+        const { data: goalData, error: goalError } = await supabase
+          .from('goal')
+          .select('skeletal_muscle_mass, percent_body_fat')
+          .order('created_at', { ascending: false })
+          .limit(1)
+
+        if (goalError) {
+          throw goalError
+        }
+
+        if (goalData && goalData.length > 0) {
+          setGoals(goalData[0])
+        }
       } catch (err) {
         setError(err instanceof Error ? err.message : 'An error occurred')
       } finally {
@@ -94,7 +112,7 @@ export default function GraphPage() {
       }
     }
 
-    fetchMetrics()
+    fetchData()
   }, [])
 
   const chartData = {
@@ -120,7 +138,7 @@ export default function GraphPage() {
       },
       {
         label: 'Muscle Mass Goal',
-        data: Array(metrics.length).fill(GOALS.muscle_mass),
+        data: Array(metrics.length).fill(goals.skeletal_muscle_mass),
         borderColor: COLORS.primary,
         borderDash: [5, 5],
         borderWidth: 1,
@@ -130,7 +148,7 @@ export default function GraphPage() {
       },
       {
         label: 'Body Fat Goal',
-        data: Array(metrics.length).fill(GOALS.body_fat),
+        data: Array(metrics.length).fill(goals.percent_body_fat),
         borderColor: COLORS.secondary,
         borderDash: [5, 5],
         borderWidth: 1,
@@ -284,19 +302,21 @@ export default function GraphPage() {
     setInputError(null)
 
     const formData = new FormData(e.currentTarget)
+    const weight = formData.get('weight')
     const muscleMass = formData.get('muscleMass')
     const bodyFat = formData.get('bodyFat')
     
     // Validate inputs
-    if (!muscleMass || !bodyFat) {
+    if (!weight || !muscleMass || !bodyFat) {
       setInputError('Please fill in all fields')
       return
     }
 
+    const weightValue = parseFloat(weight as string)
     const muscleValue = parseFloat(muscleMass as string)
     const fatValue = parseFloat(bodyFat as string)
 
-    if (isNaN(muscleValue) || isNaN(fatValue)) {
+    if (isNaN(weightValue) || isNaN(muscleValue) || isNaN(fatValue)) {
       setInputError('Please enter valid numbers')
       return
     }
@@ -307,6 +327,7 @@ export default function GraphPage() {
         .insert([
           {
             created_at: new Date().toISOString(),
+            weight: weightValue,
             skeletal_muscle_mass: muscleValue,
             percent_body_fat: fatValue
           }
@@ -366,6 +387,9 @@ export default function GraphPage() {
                     Date
                   </th>
                   <th className="px-6 py-3 text-left text-xs font-medium text-[#D9D9D9] uppercase tracking-wider">
+                    Weight (kg)
+                  </th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-[#D9D9D9] uppercase tracking-wider">
                     Skeletal Muscle Mass (kg)
                   </th>
                   <th className="px-6 py-3 text-left text-xs font-medium text-[#D9D9D9] uppercase tracking-wider">
@@ -378,17 +402,23 @@ export default function GraphPage() {
                   <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-[#D9D9D9]">
                     Goal
                   </td>
+                  <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-[#D9D9D9]">
+                    -
+                  </td>
                   <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-[#D8110A]">
-                    {GOALS.muscle_mass}
+                    {goals.skeletal_muscle_mass}
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-white">
-                    {GOALS.body_fat}
+                    {goals.percent_body_fat}
                   </td>
                 </tr>
                 {metrics.map((metric, index) => (
                   <tr key={metric.id} className={index % 2 === 0 ? 'bg-[#1a1a1a]' : 'bg-[#111111]'}>
                     <td className="px-6 py-4 whitespace-nowrap text-sm text-[#D9D9D9]">
                       {new Date(metric.created_at).toLocaleDateString()}
+                    </td>
+                    <td className="px-6 py-4 whitespace-nowrap text-sm text-[#D9D9D9]">
+                      {metric.weight ?? 'NaN'}
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap text-sm text-[#D8110A]">
                       {metric.skeletal_muscle_mass}
@@ -419,32 +449,48 @@ export default function GraphPage() {
           <p className="text-sm text-[#D9D9D9]/50 mb-4">
              {new Date().toLocaleDateString()}
           </p>
-          <form ref={formRef} onSubmit={handleAddMetric} className="space-y-4">
-            <div>
-              <label htmlFor="muscleMass" className="block text-sm font-medium text-[#D9D9D9] mb-1">
-                Skeletal Muscle Mass (kg)
-              </label>
-              <input
-                type="number"
-                step="0.1"
-                id="muscleMass"
-                name="muscleMass"
-                className="w-full px-3 py-2 bg-[#1a1a1a] border border-gray-800 rounded-md text-white focus:outline-none focus:ring-2 focus:ring-[#D8110A]"
-                placeholder="Enter muscle mass"
-              />
-            </div>
-            <div>
-              <label htmlFor="bodyFat" className="block text-sm font-medium text-[#D9D9D9] mb-1">
-                Body Fat (%)
-              </label>
-              <input
-                type="number"
-                step="0.1"
-                id="bodyFat"
-                name="bodyFat"
-                className="w-full px-3 py-2 bg-[#1a1a1a] border border-gray-800 rounded-md text-white focus:outline-none focus:ring-2 focus:ring-[#D8110A]"
-                placeholder="Enter body fat percentage"
-              />
+          <form ref={formRef} onSubmit={handleAddMetric} className="p-6 min-w-[400px]">
+
+            <div className="space-y-4">
+              <div>
+                <label htmlFor="weight" className="block text-sm font-medium text-[#D9D9D9] mb-1">
+                  Weight (kg)
+                </label>
+                <input
+                  type="number"
+                  step="0.1"
+                  id="weight"
+                  name="weight"
+                  className="w-full px-3 py-2 bg-[#1a1a1a] border border-gray-800 rounded-md text-white focus:outline-none focus:ring-2 focus:ring-[#D8110A]"
+                  placeholder="Enter weight"
+                />
+              </div>
+              <div>
+                <label htmlFor="muscleMass" className="block text-sm font-medium text-[#D9D9D9] mb-1">
+                  Skeletal Muscle Mass (kg)
+                </label>
+                <input
+                  type="number"
+                  step="0.1"
+                  id="muscleMass"
+                  name="muscleMass"
+                  className="w-full px-3 py-2 bg-[#1a1a1a] border border-gray-800 rounded-md text-white focus:outline-none focus:ring-2 focus:ring-[#D8110A]"
+                  placeholder="Enter muscle mass"
+                />
+              </div>
+              <div>
+                <label htmlFor="bodyFat" className="block text-sm font-medium text-[#D9D9D9] mb-1">
+                  Body Fat (%)
+                </label>
+                <input
+                  type="number"
+                  step="0.1"
+                  id="bodyFat"
+                  name="bodyFat"
+                  className="w-full px-3 py-2 bg-[#1a1a1a] border border-gray-800 rounded-md text-white focus:outline-none focus:ring-2 focus:ring-[#D8110A]"
+                  placeholder="Enter body fat percentage"
+                />
+              </div>
             </div>
             {inputError && (
               <p className="text-[#D8110A] text-sm mt-2">{inputError}</p>

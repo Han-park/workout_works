@@ -13,6 +13,7 @@ interface AuthContextType {
   signOut: () => Promise<void>
   updateProfile: (data: { display_name: string }) => Promise<void>
   updatePassword: (password: string) => Promise<void>
+  updateGoals: (data: { goal_muscle_mass: number, goal_body_fat: number }) => Promise<void>
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined)
@@ -96,6 +97,20 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     }
   }
 
+  const updateGoals = async (data: { goal_muscle_mass: number, goal_body_fat: number }) => {
+    if (!user) throw new Error('No user found')
+
+    const { error } = await supabase
+      .from('goal')
+      .insert([{
+        skeletal_muscle_mass: data.goal_muscle_mass,
+        percent_body_fat: data.goal_body_fat,
+        UID: user.id
+      }])
+    
+    if (error) throw error
+  }
+
   const signOut = async () => {
     const { error } = await supabase.auth.signOut()
     if (error) throw error
@@ -110,6 +125,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     signOut,
     updateProfile,
     updatePassword,
+    updateGoals,
   }
 
   return (

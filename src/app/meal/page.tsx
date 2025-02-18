@@ -1,9 +1,10 @@
 'use client'
 
-import { useEffect, useState, useRef, useCallback } from 'react'
+import { useEffect, useState, useRef } from 'react'
 import { supabase } from '@/lib/supabase'
 import Header from '@/components/Header'
-import { ChevronLeftIcon, ChevronRightIcon, PlusIcon, MagicWandIcon } from '@radix-ui/react-icons'
+import { ChevronLeftIcon, ChevronRightIcon, PlusIcon, MagicWandIcon, InfoCircledIcon } from '@radix-ui/react-icons'
+import * as Tooltip from '@radix-ui/react-tooltip'
 
 interface Food {
   id: number
@@ -25,38 +26,69 @@ export default function MealPage() {
   const [weight, setWeight] = useState('')
   const [calculatingProtein, setCalculatingProtein] = useState(false)
   const [proteinResult, setProteinResult] = useState<number | null>(null)
+  const [latestWeight, setLatestWeight] = useState<number | null>(null)
+  const [showTooltip, setShowTooltip] = useState(false)
   const formRef = useRef<HTMLFormElement>(null)
 
-  const fetchFoods = useCallback(async () => {
-    try {
-      setLoading(true)
-      const selectedDateStr = new Date(selectedDate).toISOString().split('T')[0]
+  useEffect(() => {
+    async function fetchData() {
+      try {
+        setLoading(true)
+        // Fetch latest weight
+        const { data: weightData, error: weightError } = await supabase
+          .from('metric')
+          .select('weight')
+          .order('created_at', { ascending: false })
+          .limit(1)
 
-      const { data, error: fetchError } = await supabase
-        .from('meal')
-        .select('*')
-        .eq('recognition_date', selectedDateStr)
-        .order('created_at', { ascending: false })
+        if (weightError) throw weightError
 
-      if (fetchError) throw fetchError
-      setFoods(data || [])
-    } catch (error: unknown) {
-      const errorMessage = error instanceof Error ? error.message : 'Failed to fetch foods'
-      console.error('Failed to fetch foods:', errorMessage)
-    } finally {
-      setLoading(false)
+        if (weightData && weightData.length > 0 && weightData[0].weight) {
+          setLatestWeight(weightData[0].weight)
+        }
+
+        // Fetch foods
+        const selectedDateStr = new Date(selectedDate).toISOString().split('T')[0]
+        const { data: foodData, error: foodError } = await supabase
+          .from('meal')
+          .select('*')
+          .eq('recognition_date', selectedDateStr)
+          .order('created_at', { ascending: false })
+
+        if (foodError) throw foodError
+        setFoods(foodData || [])
+      } catch (error) {
+        console.error('Error fetching data:', error)
+      } finally {
+        setLoading(false)
+      }
     }
+
+    fetchData()
   }, [selectedDate])
 
-  useEffect(() => {
-    fetchFoods()
-  }, [fetchFoods])
+  // Derived values
+  const totalProtein = foods.reduce((sum: number, food: Food) => sum + food.protein_content, 0)
+  const proteinGoal = latestWeight ? Math.round(latestWeight * 2) : 160
+  const creatineTaken = foods.some((food: Food) => food.creatine)
 
-  // Calculate total protein for the selected date
-  const totalProtein = foods.reduce((sum, food) => sum + food.protein_content, 0)
+  const handleDateChange = (days: number) => {
+    const newDate = new Date(selectedDate)
+    newDate.setDate(newDate.getDate() + days)
+    setSelectedDate(newDate)
+  }
 
-  // Check if creatine was taken on the selected date
-  const creatineTaken = foods.some(food => food.creatine)
+  const handleFoodNameChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const value = e.target.value.toLowerCase().trim()
+    setFoodName(value)
+    setIsCreatine(value === 'creatine')
+    setProteinResult(null)
+  }
+
+  const handleWeightChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    setWeight(e.target.value)
+    setProteinResult(null)
+  }
 
   const handleAddFood = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault()
@@ -100,30 +132,12 @@ export default function MealPage() {
 
       if (insertError) throw insertError
 
-      setFoods(prev => [data[0], ...prev])
+      setFoods((prev: Food[]) => [data[0], ...prev])
       formRef.current?.reset()
       setIsCreatine(false) // Reset the creatine state after successful submission
     } catch (error: unknown) {
       setInputError(error instanceof Error ? error.message : 'Failed to add food')
     }
-  }
-
-  const handleDateChange = (days: number) => {
-    const newDate = new Date(selectedDate)
-    newDate.setDate(newDate.getDate() + days)
-    setSelectedDate(newDate)
-  }
-
-  const handleFoodNameChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const value = e.target.value.toLowerCase().trim()
-    setFoodName(value)
-    setIsCreatine(value === 'creatine')
-    setProteinResult(null) // Reset protein result when food name changes
-  }
-
-  const handleWeightChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    setWeight(e.target.value)
-    setProteinResult(null) // Reset protein result when weight changes
   }
 
   const calculateProtein = async () => {
@@ -215,7 +229,31 @@ export default function MealPage() {
         <div className="bg-[#111111] p-4 rounded-lg border border-gray-800">
           <div className="flex justify-between items-center mb-2">
             <h2 className="text-lg font-medium text-white/90">Daily Summary</h2>
-            <span className="text-sm text-white/50">Goal: 160g of protein</span>
+            <div className="flex items-center gap-2">
+              <span className="text-sm text-white/50">Goal: {proteinGoal}g of protein</span>
+              <Tooltip.Provider>
+                <Tooltip.Root>
+                  <Tooltip.Trigger asChild>
+                    <button
+                      className="text-white/50 hover:text-white transition-colors"
+                      aria-label="Show protein goal calculation info"
+                    >
+                      <InfoCircledIcon className="w-4 h-4" />
+                    </button>
+                  </Tooltip.Trigger>
+                  <Tooltip.Portal>
+                    <Tooltip.Content
+                      className="select-none rounded-md bg-[#1a1a1a] px-4 py-2.5 text-sm text-white/70 shadow-lg border border-gray-800 max-w-[300px]"
+                      sideOffset={5}
+                    >
+                      To gain muscles, you need 2 grams of protein per kilogram of your body weight.
+                      Your current weight is {latestWeight ? `${latestWeight}kg, so your protein goal is ${proteinGoal}g` : 'not set, using default goal of 160g'}.
+                      <Tooltip.Arrow className="fill-[#1a1a1a]" />
+                    </Tooltip.Content>
+                  </Tooltip.Portal>
+                </Tooltip.Root>
+              </Tooltip.Provider>
+            </div>
           </div>
           <div className="flex gap-4">
             <div className="flex-1 bg-[#1a1a1a] p-3 rounded-md">
@@ -305,7 +343,7 @@ export default function MealPage() {
 
         {/* Food List */}
         <div className="space-y-2">
-          {foods.map(food => (
+          {foods.map((food: Food) => (
             <div
               key={food.id}
               className="bg-[#111111] p-4 rounded-lg border border-gray-800 flex justify-between items-center"
