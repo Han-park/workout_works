@@ -4,6 +4,7 @@ import Image from 'next/image'
 import { usePathname, useRouter } from 'next/navigation'
 import { useAuth } from '@/contexts/AuthContext'
 import { PersonIcon } from '@radix-ui/react-icons'
+import Link from 'next/link'
 
 interface HeaderProps {
   onAddClick?: () => void
@@ -26,6 +27,7 @@ export default function Header({ onAddClick }: HeaderProps) {
   return (
     <div className="w-full flex justify-between items-center p-4 bg-black">
       <div className="relative w-[40px] h-[40px]">
+        <Link href="/graph">
         <Image
           src="/WW.png"
           alt="Workout Works Logo"
@@ -34,6 +36,7 @@ export default function Header({ onAddClick }: HeaderProps) {
           className="object-contain"
           priority
         />
+        </Link>
       </div>
       <div className="flex items-center gap-4">
         {showAddButton && onAddClick && (
