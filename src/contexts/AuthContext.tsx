@@ -78,7 +78,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   }
 
   const updateProfile = async (data: { display_name: string }) => {
-    const { error, data: userData } = await supabase.auth.updateUser({
+    const { error } = await supabase.auth.updateUser({
       data: data
     })
     
