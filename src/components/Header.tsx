@@ -3,7 +3,7 @@
 import Image from 'next/image'
 import { usePathname, useRouter } from 'next/navigation'
 import { useAuth } from '@/contexts/AuthContext'
-import { PersonIcon, PlusIcon, ImageIcon } from '@radix-ui/react-icons'
+import { PlusIcon, ImageIcon } from '@radix-ui/react-icons'
 import Link from 'next/link'
 
 interface HeaderProps {
