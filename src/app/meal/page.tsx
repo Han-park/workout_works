@@ -3,7 +3,7 @@
 import { useEffect, useState, useRef, useCallback } from 'react'
 import { supabase } from '@/lib/supabase'
 import Header from '@/components/Header'
-import { ChevronLeftIcon, ChevronRightIcon, PlusIcon } from '@radix-ui/react-icons'
+import { ChevronLeftIcon, ChevronRightIcon, PlusIcon, MagicWandIcon } from '@radix-ui/react-icons'
 
 interface Food {
   id: number
@@ -21,6 +21,10 @@ export default function MealPage() {
   const [loading, setLoading] = useState(true)
   const [inputError, setInputError] = useState<string | null>(null)
   const [isCreatine, setIsCreatine] = useState(false)
+  const [foodName, setFoodName] = useState('')
+  const [weight, setWeight] = useState('')
+  const [calculatingProtein, setCalculatingProtein] = useState(false)
+  const [proteinResult, setProteinResult] = useState<number | null>(null)
   const formRef = useRef<HTMLFormElement>(null)
 
   const fetchFoods = useCallback(async () => {
@@ -99,8 +103,8 @@ export default function MealPage() {
       setFoods(prev => [data[0], ...prev])
       formRef.current?.reset()
       setIsCreatine(false) // Reset the creatine state after successful submission
-    } catch (err) {
-      setInputError(err instanceof Error ? err.message : 'Failed to add food')
+    } catch (error: unknown) {
+      setInputError(error instanceof Error ? error.message : 'Failed to add food')
     }
   }
 
@@ -112,7 +116,60 @@ export default function MealPage() {
 
   const handleFoodNameChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const value = e.target.value.toLowerCase().trim()
+    setFoodName(value)
     setIsCreatine(value === 'creatine')
+    setProteinResult(null) // Reset protein result when food name changes
+  }
+
+  const handleWeightChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    setWeight(e.target.value)
+    setProteinResult(null) // Reset protein result when weight changes
+  }
+
+  const calculateProtein = async () => {
+    if (!foodName || !weight) return
+    
+    setCalculatingProtein(true)
+    setInputError(null)
+    
+    try {
+      const response = await fetch('/api/calculate-protein', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          food: foodName,
+          weight: parseFloat(weight),
+          instruction: "Please calculate the average protein content in grams. If a range is given, take the average. Return ONLY the number without any text or units."
+        }),
+      })
+      
+      const data = await response.json()
+
+      if (!response.ok) {
+        throw new Error(data.error || 'Failed to calculate protein content')
+      }
+      
+      const proteinContent = parseFloat(data.protein)
+      
+      if (isNaN(proteinContent) || proteinContent < 0) {
+        throw new Error('Invalid protein content received')
+      }
+
+      setProteinResult(proteinContent)
+      
+      // Set the protein input value
+      const proteinInput = formRef.current?.querySelector('input[name="proteinContent"]') as HTMLInputElement
+      if (proteinInput) {
+        proteinInput.value = proteinContent.toString()
+      }
+    } catch (error: unknown) {
+      setInputError(error instanceof Error ? error.message : 'Failed to calculate protein content')
+      console.error('Error calculating protein:', error instanceof Error ? error.message : error)
+    } finally {
+      setCalculatingProtein(false)
+    }
   }
 
   if (loading) {
@@ -184,18 +241,41 @@ export default function MealPage() {
               onChange={handleFoodNameChange}
               className="w-full px-3 py-2 bg-[#1a1a1a] border border-gray-800 rounded-md text-white focus:outline-none focus:ring-2 focus:ring-[#D8110A]"
             />
-            {isCreatine ? (
-              <div className="w-full px-3 py-2 bg-[#1a1a1a] border border-gray-800 rounded-md text-white/50">
-                5g
+            <div className="flex gap-2 items-center">
+              {isCreatine ? (
+                <div className="w-full px-3 py-2 bg-[#1a1a1a] border border-gray-800 rounded-md text-white/50">
+                  5g
+                </div>
+              ) : (
+                <>
+                  <input
+                    type="number"
+                    name="weight"
+                    placeholder="Total (g)"
+                    step="0.1"
+                    onChange={handleWeightChange}
+                    className="flex-1 px-3 py-2 bg-[#1a1a1a] border border-gray-800 rounded-md text-white focus:outline-none focus:ring-2 focus:ring-[#D8110A] [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
+                  />
+                  <button
+                    type="button"
+                    onClick={calculateProtein}
+                    disabled={!foodName || !weight || calculatingProtein}
+                    className="pl-3 pr-4 py-2 bg-[#D8110A] border border-gray-800 rounded-md text-white disabled:opacity-50 disabled:cursor-not-allowed hover:bg-[#2a2a2a] transition-colors"
+                  >
+                    <MagicWandIcon className="w-5 h-5" />
+                  </button>
+                </>
+              )}
+            </div>
+            {calculatingProtein && (
+              <div className="text-sm text-white/50 text-center">
+                Calculating protein content...
               </div>
-            ) : (
-              <input
-                type="number"
-                name="weight"
-                placeholder="Total (g)"
-                step="0.1"
-                className="w-full px-3 py-2 bg-[#1a1a1a] border border-gray-800 rounded-md text-white focus:outline-none focus:ring-2 focus:ring-[#D8110A] [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
-              />
+            )}
+            {proteinResult !== null && !calculatingProtein && (
+              <div className="text-sm text-[#D8110A] text-center">
+                Estimated protein content: {proteinResult}g
+              </div>
             )}
             {isCreatine ? (
               <div className="w-full px-3 py-2 bg-[#1a1a1a] border border-gray-800 rounded-md text-white/50">
