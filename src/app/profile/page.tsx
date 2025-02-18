@@ -35,7 +35,7 @@ export default function ProfilePage() {
           const { data, error } = await supabase
             .from('goal')
             .select('skeletal_muscle_mass, percent_body_fat')
-            .eq('UID', user?.id)
+            .eq('UID', user?.id || '')
             .order('created_at', { ascending: false })
             .limit(1)
 

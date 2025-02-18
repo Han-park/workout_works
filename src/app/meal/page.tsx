@@ -5,6 +5,8 @@ import { supabase } from '@/lib/supabase'
 import Header from '@/components/Header'
 import { ChevronLeftIcon, ChevronRightIcon, PlusIcon, MagicWandIcon, InfoCircledIcon } from '@radix-ui/react-icons'
 import * as Tooltip from '@radix-ui/react-tooltip'
+import { useAuth } from '@/contexts/AuthContext'
+import { useRouter } from 'next/navigation'
 
 interface Food {
   id: number
@@ -14,9 +16,12 @@ interface Food {
   weight: number
   protein_content: number
   creatine: boolean
+  UID: string
 }
 
 export default function MealPage() {
+  const { user } = useAuth()
+  const router = useRouter()
   const [selectedDate, setSelectedDate] = useState(new Date())
   const [foods, setFoods] = useState<Food[]>([])
   const [loading, setLoading] = useState(true)
@@ -30,13 +35,19 @@ export default function MealPage() {
   const formRef = useRef<HTMLFormElement>(null)
 
   useEffect(() => {
+    if (!user) {
+      router.push('/auth/signin')
+      return
+    }
+
     async function fetchData() {
       try {
         setLoading(true)
-        // Fetch latest weight
+        // Fetch latest weight for the current user
         const { data: weightData, error: weightError } = await supabase
           .from('metric')
           .select('weight')
+          .eq('UID', user?.id || '')
           .order('created_at', { ascending: false })
           .limit(1)
 
@@ -46,11 +57,12 @@ export default function MealPage() {
           setLatestWeight(weightData[0].weight)
         }
 
-        // Fetch foods
+        // Fetch foods for the current user
         const selectedDateStr = new Date(selectedDate).toISOString().split('T')[0]
         const { data: foodData, error: foodError } = await supabase
           .from('meal')
           .select('*')
+          .eq('UID', user?.id || '')
           .eq('recognition_date', selectedDateStr)
           .order('created_at', { ascending: false })
 
@@ -64,7 +76,7 @@ export default function MealPage() {
     }
 
     fetchData()
-  }, [selectedDate])
+  }, [selectedDate, user, router])
 
   // Derived values
   const totalProtein = foods.reduce((sum: number, food: Food) => sum + food.protein_content, 0)
@@ -93,6 +105,11 @@ export default function MealPage() {
     e.preventDefault()
     setInputError(null)
 
+    if (!user) {
+      setInputError('You must be logged in to add food')
+      return
+    }
+
     const formData = new FormData(e.currentTarget)
     const foodName = formData.get('foodName') as string
     const weight = formData.get('weight')
@@ -120,12 +137,13 @@ export default function MealPage() {
       const { data, error: insertError } = await supabase
         .from('meal')
         .insert([{
-          created_at: new Date().toISOString(), // Current time when the record is created
-          recognition_date: selectedDateStr, // Just the date part of selectedDate
+          created_at: new Date().toISOString(),
+          recognition_date: selectedDateStr,
           food_name: foodName,
           weight: isCreatine ? 5 : Number(weight),
           protein_content: isCreatine ? 0 : Number(proteinContent),
-          creatine: isCreatine
+          creatine: isCreatine,
+          UID: user.id
         }])
         .select()
 
@@ -133,7 +151,7 @@ export default function MealPage() {
 
       setFoods((prev: Food[]) => [data[0], ...prev])
       formRef.current?.reset()
-      setIsCreatine(false) // Reset the creatine state after successful submission
+      setIsCreatine(false)
     } catch (error: unknown) {
       setInputError(error instanceof Error ? error.message : 'Failed to add food')
     }

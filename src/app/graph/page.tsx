@@ -3,6 +3,8 @@
 import { useEffect, useState, useRef } from 'react'
 import { supabase } from '@/lib/supabase'
 import Header from '@/components/Header'
+import { useAuth } from '@/contexts/AuthContext'
+import { useRouter } from 'next/navigation'
 import {
   Chart as ChartJS,
   CategoryScale,
@@ -64,6 +66,8 @@ const calculateMovingAverage = (data: number[], windowSize: number = 3) => {
 };
 
 export default function GraphPage() {
+  const { user } = useAuth()
+  const router = useRouter()
   const [metrics, setMetrics] = useState<Metric[]>([])
   const [goals, setGoals] = useState<Goal>({ skeletal_muscle_mass: 0, percent_body_fat: 0 })
   const [loading, setLoading] = useState(true)
@@ -73,21 +77,26 @@ export default function GraphPage() {
   const formRef = useRef<HTMLFormElement>(null)
 
   useEffect(() => {
+    if (!user) {
+      router.push('/auth/signin')
+      return
+    }
+
     async function fetchData() {
       try {
         // Fetch metrics
         const { data: metricsData, error: metricsError } = await supabase
           .from('metric')
           .select('*')
-        
-        if (metricsError) {
-          throw metricsError
-        }
+          .eq('UID', user?.id || '')
+          .order('created_at', { ascending: true })
+
+        if (metricsError) throw metricsError
 
         // Sort the metrics data
         const sortedData = [...(metricsData || [])].sort((a, b) => 
           new Date(a.created_at).getTime() - new Date(b.created_at).getTime()
-        );
+        )
 
         setMetrics(sortedData)
 
@@ -95,12 +104,11 @@ export default function GraphPage() {
         const { data: goalData, error: goalError } = await supabase
           .from('goal')
           .select('skeletal_muscle_mass, percent_body_fat')
+          .eq('UID', user?.id || '')
           .order('created_at', { ascending: false })
           .limit(1)
 
-        if (goalError) {
-          throw goalError
-        }
+        if (goalError) throw goalError
 
         if (goalData && goalData.length > 0) {
           setGoals(goalData[0])
@@ -113,7 +121,7 @@ export default function GraphPage() {
     }
 
     fetchData()
-  }, [])
+  }, [user, router])
 
   const chartData = {
     labels: metrics.map(metric => new Date(metric.created_at).toLocaleDateString()),
@@ -301,6 +309,11 @@ export default function GraphPage() {
     e.preventDefault()
     setInputError(null)
 
+    if (!user) {
+      setInputError('You must be logged in to add metrics')
+      return
+    }
+
     const formData = new FormData(e.currentTarget)
     const weight = formData.get('weight')
     const muscleMass = formData.get('muscleMass')
@@ -329,7 +342,8 @@ export default function GraphPage() {
             created_at: new Date().toISOString(),
             weight: weightValue,
             skeletal_muscle_mass: muscleValue,
-            percent_body_fat: fatValue
+            percent_body_fat: fatValue,
+            UID: user.id
           }
         ])
         .select()
