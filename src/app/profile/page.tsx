@@ -7,11 +7,6 @@ import Header from '@/components/Header'
 import { LockClosedIcon, TargetIcon } from '@radix-ui/react-icons'
 import { supabase } from '@/lib/supabase'
 
-interface Goal {
-  skeletal_muscle_mass: number
-  percent_body_fat: number
-}
-
 export default function ProfilePage() {
   const { user, signOut, updateProfile, updatePassword, updateGoals } = useAuth()
   const router = useRouter()

@@ -27,7 +27,6 @@ export default function MealPage() {
   const [calculatingProtein, setCalculatingProtein] = useState(false)
   const [proteinResult, setProteinResult] = useState<number | null>(null)
   const [latestWeight, setLatestWeight] = useState<number | null>(null)
-  const [showTooltip, setShowTooltip] = useState(false)
   const formRef = useRef<HTMLFormElement>(null)
 
   useEffect(() => {
