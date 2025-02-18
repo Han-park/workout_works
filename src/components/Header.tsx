@@ -16,14 +16,6 @@ export default function Header({ onAddClick }: HeaderProps) {
   const { user } = useAuth()
   const showAddButton = pathname === '/graph'
 
-  const handleProfileClick = () => {
-    if (user) {
-      router.push('/profile')
-    } else {
-      router.push('/auth/signin')
-    }
-  }
-
   return (
     <header className="bg-[#111111] border-b border-gray-800">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
