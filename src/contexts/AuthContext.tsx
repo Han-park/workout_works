@@ -25,11 +25,15 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const supabase = createClientComponentClient()
 
   useEffect(() => {
-    // Check active sessions and sets the user
     const initializeAuth = async () => {
       try {
         const { data: { session } } = await supabase.auth.getSession()
         setUser(session?.user ?? null)
+        
+        if (session?.user) {
+          // If we have a session, ensure the router is ready
+          router.refresh()
+        }
       } catch (error) {
         console.error('Error getting session:', error)
       } finally {
@@ -39,12 +43,15 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
     initializeAuth()
 
-    // Listen for changes in auth state
     const {
       data: { subscription },
-    } = supabase.auth.onAuthStateChange((_event, session) => {
+    } = supabase.auth.onAuthStateChange(async (_event, session) => {
       setUser(session?.user ?? null)
-      router.refresh()
+      setLoading(false)
+      
+      if (session?.user) {
+        router.refresh()
+      }
     })
 
     return () => {
