@@ -1,5 +1,9 @@
+'use client'
+
 import Image from 'next/image'
-import { usePathname } from 'next/navigation'
+import { usePathname, useRouter } from 'next/navigation'
+import { useAuth } from '@/contexts/AuthContext'
+import { PersonIcon } from '@radix-ui/react-icons'
 
 interface HeaderProps {
   onAddClick?: () => void
@@ -7,7 +11,17 @@ interface HeaderProps {
 
 export default function Header({ onAddClick }: HeaderProps) {
   const pathname = usePathname()
+  const router = useRouter()
+  const { user } = useAuth()
   const showAddButton = pathname === '/graph'
+
+  const handleProfileClick = () => {
+    if (user) {
+      router.push('/profile')
+    } else {
+      router.push('/auth/signin')
+    }
+  }
 
   return (
     <div className="w-full flex justify-between items-center p-4 bg-black">
@@ -21,14 +35,23 @@ export default function Header({ onAddClick }: HeaderProps) {
           priority
         />
       </div>
-      {showAddButton && onAddClick && (
+      <div className="flex items-center gap-4">
+        {showAddButton && onAddClick && (
+          <button
+            onClick={onAddClick}
+            className="px-4 py-2 border border-[#D8110A]/50 bg-white/10 text-white/60 rounded-lg hover:bg-opacity-90 transition-colors"
+          >
+            Add Data
+          </button>
+        )}
         <button
-          onClick={onAddClick}
-          className="px-4 py-2 border border-[#D8110A]/50 bg-white/10 text-white/60 rounded-lg hover:bg-opacity-90 transition-colors"
+          onClick={handleProfileClick}
+          className="px-2 py-2 /50 text-white/60 rounded-lg hover:bg-opacity-90 flex items-center transition-colors"
         >
-          Add Data
+          <PersonIcon className="mr-2 w-4 h-4" />
+          {user ? (user.user_metadata.display_name || 'Profile') : 'Sign In'}
         </button>
-      )}
+      </div>
     </div>
   )
 } 
