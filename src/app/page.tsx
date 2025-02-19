@@ -7,6 +7,14 @@ import styles from './styles.module.css' // Import the CSS module
 
 export const revalidate = 60 // revalidate every minute
 
+// Define the member type
+interface Member {
+  id: string
+  display_name?: string
+  avatar_url?: string
+  last_activity?: string
+}
+
 // Temporarily commented out member fetching functionality
 /*
 async function getMembers() {
@@ -42,7 +50,7 @@ async function getMembers() {
 
 export default async function Home() {
   // const members = await getMembers()
-  const members: any[] = [] // Temporary empty array while profile fetching is disabled
+  const members: Member[] = [] // Temporary empty array while profile fetching is disabled
 
   return (
     <main className="min-h-screen bg-[#111111] text-white py-16">
