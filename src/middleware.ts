@@ -13,11 +13,20 @@ export async function middleware(request: NextRequest) {
       data: { session },
     } = await supabase.auth.getSession()
 
-    // Check if the request is for a protected route
+    // Define public and protected routes
+    const isPublicRoute = ['/', '/auth/signin', '/auth/callback'].some(
+      route => request.nextUrl.pathname === route
+    )
     const isProtectedRoute = ['/meal', '/graph', '/workout', '/profile'].some(
       route => request.nextUrl.pathname.startsWith(route)
     )
 
+    // Allow public routes regardless of auth status
+    if (isPublicRoute) {
+      return res
+    }
+
+    // Check protected routes
     if (isProtectedRoute && !session) {
       // Redirect to signin if accessing protected route without session
       const redirectUrl = new URL('/auth/signin', request.nextUrl.origin)
@@ -34,5 +43,5 @@ export async function middleware(request: NextRequest) {
 }
 
 export const config = {
-  matcher: ['/((?!_next/static|_next/image|favicon.ico|auth/callback).*)']
+  matcher: ['/((?!_next/static|_next/image|favicon.ico).*)']
 } 

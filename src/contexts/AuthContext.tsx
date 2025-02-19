@@ -28,14 +28,16 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     const initializeAuth = async () => {
       try {
         const { data: { session } } = await supabase.auth.getSession()
-        setUser(session?.user ?? null)
-        
         if (session?.user) {
-          // If we have a session, ensure the router is ready
-          router.refresh()
+          console.log('Logged in user ID:', session.user.id)
+          setUser(session.user)
+        } else {
+          console.log('Not logged in')
+          setUser(null)
         }
       } catch (error) {
         console.error('Error getting session:', error)
+        setUser(null)
       } finally {
         setLoading(false)
       }
@@ -46,12 +48,15 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     const {
       data: { subscription },
     } = supabase.auth.onAuthStateChange(async (_event, session) => {
-      setUser(session?.user ?? null)
-      setLoading(false)
-      
       if (session?.user) {
+        console.log('Auth state changed - User ID:', session.user.id)
+        setUser(session.user)
         router.refresh()
+      } else {
+        console.log('Auth state changed - Not logged in')
+        setUser(null)
       }
+      setLoading(false)
     })
 
     return () => {
