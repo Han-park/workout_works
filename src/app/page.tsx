@@ -75,6 +75,7 @@ export default async function Home() {
                         src={member.avatar_url}
                         alt={member.display_name || 'Member'}
                         fill
+                        sizes="(max-width: 640px) 48px, (max-width: 768px) 64px, 80px"
                         className="object-cover"
                       />
                     ) : (
@@ -104,6 +105,13 @@ export default async function Home() {
               <p className="mt-2 text-sm">Be the first to join!</p>
             </div>
           )}
+        </div>
+
+        {/* Mockup for member profile pictures */}
+        <div className="grid grid-cols-3 gap-4 mt-4">
+          <div className="w-12 h-12 bg-gray-600 rounded-full"></div>
+          <div className="w-12 h-12 bg-gray-600 rounded-full"></div>
+          <div className="w-12 h-12 bg-gray-600 rounded-full"></div>
         </div>
       </div>
     </main>
