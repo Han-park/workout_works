@@ -15,8 +15,7 @@ import {
   Title,
   Tooltip,
   Legend,
-  type LegendItem,
-  type ChartData
+  type LegendItem
 } from 'chart.js'
 import { Line, Bar } from 'react-chartjs-2'
 import { ChevronLeftIcon, ChevronRightIcon } from '@radix-ui/react-icons'
@@ -213,7 +212,7 @@ export default function GraphPage() {
     }
 
     fetchData()
-  }, [user, router, currentWeek])
+  }, [user, router, currentWeek, fetchProteinData])
 
   const handleWeekChange = (weeks: number) => {
     const newDate = new Date(currentWeek);
