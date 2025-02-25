@@ -1,6 +1,6 @@
 'use client'
 
-import { useEffect, useState, useRef } from 'react'
+import { useEffect, useState, useRef, useCallback } from 'react'
 import { supabase } from '@/lib/supabase'
 import Header from '@/components/Header'
 import { useAuth } from '@/contexts/AuthContext'
@@ -109,6 +109,50 @@ export default function GraphPage() {
   const dialogRef = useRef<HTMLDialogElement>(null)
   const formRef = useRef<HTMLFormElement>(null)
 
+  const fetchProteinData = useCallback(async (weekDate: Date) => {
+    try {
+      const { monday, sunday } = getWeekDates(weekDate);
+      
+      const { data: mealData, error: mealError } = await supabase
+        .from('meal')
+        .select('*')
+        .eq('UID', user?.id || '')
+        .gte('recognition_date', formatDateForDB(monday))
+        .lte('recognition_date', formatDateForDB(sunday))
+        .order('recognition_date', { ascending: true });
+
+      if (mealError) throw mealError;
+
+      // Process data to get daily totals
+      const dailyTotals: Record<string, number> = {};
+      
+      // Initialize all days of the week with 0
+      for (let i = 0; i < 7; i++) {
+        const day = new Date(monday);
+        day.setDate(monday.getDate() + i);
+        dailyTotals[formatDateForDB(day)] = 0;
+      }
+      
+      // Sum protein content by day
+      mealData?.forEach(meal => {
+        const date = meal.recognition_date;
+        dailyTotals[date] = (dailyTotals[date] || 0) + meal.protein_content;
+      });
+      
+      // Convert to array format for chart
+      const proteinDataArray = Object.entries(dailyTotals).map(([date, total]) => ({
+        date,
+        total
+      }));
+      
+      console.log('Fetched protein data:', proteinDataArray);
+      setProteinData(proteinDataArray);
+    } catch (err) {
+      console.error('Error fetching protein data:', err);
+      setError(err instanceof Error ? err.message : 'Failed to fetch protein data');
+    }
+  }, [user]);
+
   useEffect(() => {
     if (!user) {
       router.push('/auth/signin')
@@ -170,50 +214,6 @@ export default function GraphPage() {
 
     fetchData()
   }, [user, router, currentWeek])
-
-  const fetchProteinData = async (weekDate: Date) => {
-    try {
-      const { monday, sunday } = getWeekDates(weekDate);
-      
-      const { data: mealData, error: mealError } = await supabase
-        .from('meal')
-        .select('*')
-        .eq('UID', user?.id || '')
-        .gte('recognition_date', formatDateForDB(monday))
-        .lte('recognition_date', formatDateForDB(sunday))
-        .order('recognition_date', { ascending: true });
-
-      if (mealError) throw mealError;
-
-      // Process data to get daily totals
-      const dailyTotals: Record<string, number> = {};
-      
-      // Initialize all days of the week with 0
-      for (let i = 0; i < 7; i++) {
-        const day = new Date(monday);
-        day.setDate(monday.getDate() + i);
-        dailyTotals[formatDateForDB(day)] = 0;
-      }
-      
-      // Sum protein content by day
-      mealData?.forEach(meal => {
-        const date = meal.recognition_date;
-        dailyTotals[date] = (dailyTotals[date] || 0) + meal.protein_content;
-      });
-      
-      // Convert to array format for chart
-      const proteinDataArray = Object.entries(dailyTotals).map(([date, total]) => ({
-        date,
-        total
-      }));
-      
-      console.log('Fetched protein data:', proteinDataArray);
-      setProteinData(proteinDataArray);
-    } catch (err) {
-      console.error('Error fetching protein data:', err);
-      setError(err instanceof Error ? err.message : 'Failed to fetch protein data');
-    }
-  };
 
   const handleWeekChange = (weeks: number) => {
     const newDate = new Date(currentWeek);
@@ -687,7 +687,7 @@ const chartData = {
               data={proteinChartData} 
             />
             <div className="absolute inset-0 pointer-events-none">
-              {/* <Line 
+              <Line 
                 key={`${chartKey}-goal`}
                 options={{
                   ...proteinChartOptions,
@@ -698,7 +698,7 @@ const chartData = {
                   }
                 }}
                 data={proteinGoalData}
-              /> */}
+              />
             </div>
           </div>
         </div>
