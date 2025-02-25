@@ -11,18 +11,22 @@ import {
   LinearScale,
   PointElement,
   LineElement,
+  BarElement,
   Title,
   Tooltip,
   Legend,
-  type LegendItem
+  type LegendItem,
+  type ChartData
 } from 'chart.js'
-import { Line } from 'react-chartjs-2'
+import { Line, Bar } from 'react-chartjs-2'
+import { ChevronLeftIcon, ChevronRightIcon } from '@radix-ui/react-icons'
 
 ChartJS.register(
   CategoryScale,
   LinearScale,
   PointElement,
   LineElement,
+  BarElement,
   Title,
   Tooltip,
   Legend
@@ -41,10 +45,16 @@ interface Goal {
   percent_body_fat: number
 }
 
+interface ProteinData {
+  date: string
+  total: number
+}
+
 const COLORS = {
   primary: '#D8110A',
   secondary: '#FFFFFF',
-  neutral: '#D9D9D9'
+  neutral: '#D9D9D9',
+  protein: '#4CAF50'
 }
 
 const calculateMovingAverage = (data: number[], windowSize: number = 3) => {
@@ -65,14 +75,37 @@ const calculateMovingAverage = (data: number[], windowSize: number = 3) => {
   return result;
 };
 
+// Helper function to get start and end dates for a week
+const getWeekDates = (date: Date) => {
+  const day = date.getDay();
+  const diff = date.getDate() - day + (day === 0 ? -6 : 1); // Adjust when day is Sunday
+  const monday = new Date(date);
+  monday.setDate(diff);
+  monday.setHours(0, 0, 0, 0);
+  
+  const sunday = new Date(monday);
+  sunday.setDate(monday.getDate() + 6);
+  sunday.setHours(23, 59, 59, 999);
+  
+  return { monday, sunday };
+};
+
+// Helper function to format date as YYYY-MM-DD
+const formatDateForDB = (date: Date) => {
+  return date.toISOString().split('T')[0];
+};
+
 export default function GraphPage() {
   const { user } = useAuth()
   const router = useRouter()
   const [metrics, setMetrics] = useState<Metric[]>([])
   const [goals, setGoals] = useState<Goal>({ skeletal_muscle_mass: 0, percent_body_fat: 0 })
+  const [proteinData, setProteinData] = useState<ProteinData[]>([])
+  const [currentWeek, setCurrentWeek] = useState<Date>(new Date())
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
   const [inputError, setInputError] = useState<string | null>(null)
+  const [proteinGoal, setProteinGoal] = useState<number>(160)
   const dialogRef = useRef<HTMLDialogElement>(null)
   const formRef = useRef<HTMLFormElement>(null)
 
@@ -113,6 +146,21 @@ export default function GraphPage() {
         if (goalData && goalData.length > 0) {
           setGoals(goalData[0])
         }
+
+        // Fetch latest weight for protein goal calculation
+        const { data: weightData } = await supabase
+          .from('metric')
+          .select('weight')
+          .eq('UID', user?.id || '')
+          .order('created_at', { ascending: false })
+          .limit(1)
+
+        if (weightData && weightData.length > 0 && weightData[0].weight) {
+          setProteinGoal(Math.round(weightData[0].weight * 2));
+        }
+
+        // Fetch protein data for the current week
+        await fetchProteinData(currentWeek);
       } catch (err) {
         setError(err instanceof Error ? err.message : 'An error occurred')
       } finally {
@@ -121,9 +169,63 @@ export default function GraphPage() {
     }
 
     fetchData()
-  }, [user, router])
+  }, [user, router, currentWeek])
 
-  const chartData = {
+  const fetchProteinData = async (weekDate: Date) => {
+    try {
+      const { monday, sunday } = getWeekDates(weekDate);
+      
+      const { data: mealData, error: mealError } = await supabase
+        .from('meal')
+        .select('*')
+        .eq('UID', user?.id || '')
+        .gte('recognition_date', formatDateForDB(monday))
+        .lte('recognition_date', formatDateForDB(sunday))
+        .order('recognition_date', { ascending: true });
+
+      if (mealError) throw mealError;
+
+      // Process data to get daily totals
+      const dailyTotals: Record<string, number> = {};
+      
+      // Initialize all days of the week with 0
+      for (let i = 0; i < 7; i++) {
+        const day = new Date(monday);
+        day.setDate(monday.getDate() + i);
+        dailyTotals[formatDateForDB(day)] = 0;
+      }
+      
+      // Sum protein content by day
+      mealData?.forEach(meal => {
+        const date = meal.recognition_date;
+        dailyTotals[date] = (dailyTotals[date] || 0) + meal.protein_content;
+      });
+      
+      // Convert to array format for chart
+      const proteinDataArray = Object.entries(dailyTotals).map(([date, total]) => ({
+        date,
+        total
+      }));
+      
+      console.log('Fetched protein data:', proteinDataArray);
+      setProteinData(proteinDataArray);
+    } catch (err) {
+      console.error('Error fetching protein data:', err);
+      setError(err instanceof Error ? err.message : 'Failed to fetch protein data');
+    }
+  };
+
+  const handleWeekChange = (weeks: number) => {
+    const newDate = new Date(currentWeek);
+    newDate.setDate(newDate.getDate() + (weeks * 7));
+    setCurrentWeek(newDate);
+    // Force chart to reinitialize with new data
+    ChartJS.unregister(CategoryScale);
+    ChartJS.register(CategoryScale);
+    console.log('reinitialized');
+  };
+
+const chartData = {
     labels: metrics.map(metric => new Date(metric.created_at).toLocaleDateString()),
     datasets: [
       {
@@ -305,6 +407,167 @@ export default function GraphPage() {
     },
   }
 
+  // Protein chart data
+  const proteinChartData = {
+    labels: proteinData.map(item => {
+      const date = new Date(item.date);
+      return `${date.toLocaleDateString(undefined, { weekday: 'short' })} ${date.getDate()}`;
+    }),
+    datasets: [
+      {
+        label: 'Protein Intake (g)',
+        data: proteinData.map(item => {
+          console.log(`Protein intake for ${item.date}: ${item.total}g`);
+          return item.total;
+        }),
+        backgroundColor: COLORS.protein,
+        borderColor: COLORS.protein,
+        borderWidth: 1,
+        barThickness: 25,
+        maxBarThickness: 35
+      }
+    ]
+  };
+
+  // Separate goal line data
+  const proteinGoalData = {
+    labels: proteinData.map(item => {
+      const date = new Date(item.date);
+      return `${date.toLocaleDateString(undefined, { weekday: 'short' })} ${date.getDate()}`;
+    }),
+    datasets: [
+      {
+        label: 'Protein Goal',
+        data: Array(proteinData.length).fill(proteinGoal),
+        borderColor: `${COLORS.protein}88`,
+        borderDash: [5, 5],
+        borderWidth: 2,
+        pointRadius: 0,
+        tension: 0,
+        fill: false,
+      }
+    ]
+  };
+
+  // Calculate max protein value for better y-axis scaling
+  const maxProteinValue = Math.max(...proteinData.map(item => item.total), 0);
+  
+  const proteinChartOptions = {
+    responsive: true,
+    maintainAspectRatio: false,
+    animation: {
+      duration: 500 // Faster animations for smoother transitions
+    },
+    plugins: {
+      legend: {
+        position: 'top' as const,
+        labels: {
+          color: COLORS.neutral,
+          font: {
+            family: 'Inter, system-ui, sans-serif',
+            size: 12
+          },
+          padding: 10,
+        }
+      },
+      title: {
+        display: true,
+        text: 'Weekly Protein Intake',
+        color: COLORS.neutral,
+        font: {
+          family: 'Inter, system-ui, sans-serif',
+          size: 16,
+          weight: 500
+        },
+        padding: {
+          top: 0,
+          bottom: 10
+        }
+      },
+      tooltip: {
+        backgroundColor: 'rgba(0, 0, 0, 0.8)',
+        titleColor: COLORS.neutral,
+        bodyColor: COLORS.neutral,
+        borderColor: 'rgba(255, 255, 255, 0.1)',
+        borderWidth: 1,
+        padding: 12,
+        bodyFont: {
+          family: 'Inter, system-ui, sans-serif'
+        },
+        titleFont: {
+          family: 'Inter, system-ui, sans-serif'
+        }
+      }
+    },
+    scales: {
+      x: {
+        grid: {
+          color: 'rgba(255, 255, 255, 0.1)',
+        },
+        ticks: {
+          color: COLORS.neutral,
+          font: {
+            family: 'Inter, system-ui, sans-serif',
+            size: 11 // Slightly smaller font size
+          },
+          maxRotation: 45, // Allow some rotation for better spacing
+          minRotation: 45, // Ensure consistent rotation
+          autoSkip: true,
+          autoSkipPadding: 15 // Increased padding between labels
+        }
+      },
+      y: {
+      beginAtZero: true,
+        grid: {
+          color: 'rgba(255, 255, 255, 0.1)',
+        },
+        ticks: {
+          color: COLORS.neutral,
+          font: {
+            family: 'Inter, system-ui, sans-serif'
+          },
+          padding: 5,
+          stepSize: 40, // Larger step size to reduce number of ticks
+          maxTicksLimit: 8, // Limit number of ticks
+          precision: 0 // No decimal places
+        },
+        title: {
+          display: true,
+          text: 'Protein (g)',
+          color: COLORS.neutral,
+          font: {
+            family: 'Inter, system-ui, sans-serif'
+          },
+          padding: {
+            top: 0,
+            bottom: 0
+          }
+        },
+        suggestedMin: 0,
+        // Dynamic max value based on data and goal
+        suggestedMax: Math.max(proteinGoal * 1.2, maxProteinValue * 1.2, 240)
+      }
+    },
+    layout: {
+      padding: {
+        left: 15,
+        right: 15,
+        top: 20,
+        bottom: 10
+      }
+    }
+  };
+
+  // Effect to destroy and recreate charts when data changes
+  useEffect(() => {
+    // This will run when proteinData changes
+    return () => {
+      // Cleanup function to destroy any existing charts
+      ChartJS.unregister(CategoryScale);
+      ChartJS.register(CategoryScale);
+    };
+  }, [proteinData]);
+
   const handleAddMetric = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault()
     setInputError(null)
@@ -380,6 +643,13 @@ export default function GraphPage() {
     )
   }
 
+  // Format date range for display
+  const { monday, sunday } = getWeekDates(currentWeek);
+  const dateRangeText = `${monday.toLocaleDateString()} - ${sunday.toLocaleDateString()}`;
+  
+  // Generate a unique key for charts to force re-rendering
+  const chartKey = `protein-chart-${currentWeek.getTime()}`;
+
   return (
     
     <div className="min-h-screen bg-black text-white flex flex-col">
@@ -388,6 +658,48 @@ export default function GraphPage() {
         <div className="bg-[#111111] rounded-lg shadow-2xl p-6 border border-gray-800">
           <div className="w-full h-[400px]">
             <Line options={options} data={chartData} />
+          </div>
+        </div>
+        
+        {/* Protein Intake Graph with Weekly Navigation */}
+        <div className="mt-8 bg-[#111111] rounded-lg shadow-2xl p-6 border border-gray-800">
+          <div className="flex justify-between items-center mb-4">
+            <button 
+              onClick={() => handleWeekChange(-1)}
+              className="p-2 rounded-full hover:bg-[#1a1a1a] transition-colors"
+              aria-label="Previous week"
+            >
+              <ChevronLeftIcon className="w-5 h-5" />
+            </button>
+            <h2 className="text-lg font-medium text-white/90">{dateRangeText}</h2>
+            <button 
+              onClick={() => handleWeekChange(1)}
+              className="p-2 rounded-full hover:bg-[#1a1a1a] transition-colors"
+              aria-label="Next week"
+            >
+              <ChevronRightIcon className="w-5 h-5" />
+            </button>
+          </div>
+          <div className="w-full h-[350px] relative">
+            <Bar 
+              key={chartKey} 
+              options={proteinChartOptions} 
+              data={proteinChartData} 
+            />
+            <div className="absolute inset-0 pointer-events-none">
+              {/* <Line 
+                key={`${chartKey}-goal`}
+                options={{
+                  ...proteinChartOptions,
+                  plugins: {
+                    ...proteinChartOptions.plugins,
+                    legend: { display: false },
+                    tooltip: { enabled: false }
+                  }
+                }}
+                data={proteinGoalData}
+              /> */}
+            </div>
           </div>
         </div>
         
