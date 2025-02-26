@@ -196,8 +196,8 @@ export default function ProteinIntakeChart({
   };
 
   return (
-    <div className="bg-[#111111] rounded-lg shadow-2xl p-6 border border-gray-800">
-      <div className="flex justify-between items-center mb-4">
+    <div className="px-4">
+      <div className="flex justify-between items-center mt-4 mb-4 border-b border-gray-800 pb-4">
         <button
           onClick={() => onWeekChange(-1)}
           className="flex items-center text-neutral-300 hover:text-white transition-colors"
