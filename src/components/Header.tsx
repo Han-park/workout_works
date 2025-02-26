@@ -33,9 +33,9 @@ export default function Header({ onAddClick }: HeaderProps) {
             {showAddButton && onAddClick && (
               <button
                 onClick={onAddClick}
-                className="p-2 text-white/70 hover:text-white transition-colors"
+                className="p-2 flex items-center gap-2 text-white/70 hover:text-white transition-colors"
               >
-                <PlusIcon className="w-5 h-5" />
+                <PlusIcon className="w-5 h-5" /> Add Inbody Data
               </button>
             )}
             <Link
