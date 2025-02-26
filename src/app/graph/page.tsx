@@ -18,6 +18,7 @@ import {
 } from 'chart.js'
 import BodyCompositionChart from '@/components/BodyCompositionChart'
 import ProteinIntakeChart from '@/components/ProteinIntakeChart'
+import WorkoutVolumeChart from '@/components/WorkoutVolumeChart'
 
 ChartJS.register(
   CategoryScale,
@@ -48,6 +49,11 @@ interface ProteinData {
   total: number
 }
 
+interface VolumeData {
+  date: string
+  total: number
+}
+
 // Helper function to get start and end dates for a week
 const getWeekDates = (date: Date) => {
   const day = date.getDay();
@@ -74,6 +80,7 @@ export default function GraphPage() {
   const [metrics, setMetrics] = useState<Metric[]>([])
   const [goals, setGoals] = useState<Goal>({ skeletal_muscle_mass: 0, percent_body_fat: 0 })
   const [proteinData, setProteinData] = useState<ProteinData[]>([])
+  const [volumeData, setVolumeData] = useState<VolumeData[]>([])
   const [currentWeek, setCurrentWeek] = useState<Date>(new Date())
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
@@ -122,6 +129,26 @@ export default function GraphPage() {
     } catch (err) {
       console.error('Error fetching protein data:', err);
       setError(err instanceof Error ? err.message : 'Failed to fetch protein data');
+    }
+  }, [user]);
+
+  const fetchVolumeData = useCallback(async (weekDate: Date) => {
+    try {
+      const { monday, sunday } = getWeekDates(weekDate);
+      
+      const response = await fetch(
+        `/api/workout-volume?userId=${user?.id || ''}&startDate=${formatDateForDB(monday)}&endDate=${formatDateForDB(sunday)}`
+      );
+      
+      if (!response.ok) {
+        throw new Error('Failed to fetch workout volume data');
+      }
+      
+      const data = await response.json();
+      setVolumeData(data.volumeData || []);
+    } catch (err) {
+      console.error('Error fetching workout volume data:', err);
+      setError(err instanceof Error ? err.message : 'Failed to fetch workout volume data');
     }
   }, [user]);
 
@@ -177,6 +204,9 @@ export default function GraphPage() {
 
         // Fetch protein data for the current week
         await fetchProteinData(currentWeek);
+        
+        // Fetch workout volume data for the current week
+        await fetchVolumeData(currentWeek);
       } catch (err) {
         setError(err instanceof Error ? err.message : 'An error occurred')
       } finally {
@@ -185,7 +215,7 @@ export default function GraphPage() {
     }
 
     fetchData()
-  }, [user, router, currentWeek, fetchProteinData])
+  }, [user, router, currentWeek, fetchProteinData, fetchVolumeData])
 
   const handleWeekChange = (weeks: number) => {
     const newDate = new Date(currentWeek);
@@ -281,13 +311,21 @@ export default function GraphPage() {
       <div className="p-4 gap-4">
         <BodyCompositionChart metrics={metrics} goals={goals} />
         <div className="mt-8">
-        <ProteinIntakeChart 
-          proteinData={proteinData}
-          proteinGoal={proteinGoal}
-          currentWeek={currentWeek}
-          dateRangeText={dateRangeText}
-          onWeekChange={handleWeekChange}
-        />
+          <ProteinIntakeChart 
+            proteinData={proteinData}
+            proteinGoal={proteinGoal}
+            currentWeek={currentWeek}
+            dateRangeText={dateRangeText}
+            onWeekChange={handleWeekChange}
+          />
+        </div>
+        <div className="mt-8">
+          <WorkoutVolumeChart 
+            volumeData={volumeData}
+            currentWeek={currentWeek}
+            dateRangeText={dateRangeText}
+            onWeekChange={handleWeekChange}
+          />
         </div>
         
         {/* Data Table */}
