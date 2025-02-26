@@ -7,7 +7,7 @@ const openai = new OpenAI({
 
 export async function POST(request: Request) {
   try {
-    const { content, instruction } = await request.json()
+    const { content } = await request.json()
 
     if (!content || content.trim() === '') {
       return NextResponse.json(
