@@ -14,11 +14,10 @@ import {
   BarElement,
   Title,
   Tooltip,
-  Legend,
-  type LegendItem
+  Legend
 } from 'chart.js'
-import { Line, Bar } from 'react-chartjs-2'
-import { ChevronLeftIcon, ChevronRightIcon } from '@radix-ui/react-icons'
+import BodyCompositionChart from '@/components/BodyCompositionChart'
+import ProteinIntakeChart from '@/components/ProteinIntakeChart'
 
 ChartJS.register(
   CategoryScale,
@@ -48,31 +47,6 @@ interface ProteinData {
   date: string
   total: number
 }
-
-const COLORS = {
-  primary: '#D8110A',
-  secondary: '#FFFFFF',
-  neutral: '#D9D9D9',
-  protein: '#4CAF50'
-}
-
-const calculateMovingAverage = (data: number[], windowSize: number = 3) => {
-  const result: number[] = [];
-  for (let i = 0; i < data.length; i++) {
-    let sum = 0;
-    let count = 0;
-    
-    // Look back and forward windowSize/2 points
-    for (let j = Math.max(0, i - Math.floor(windowSize/2)); 
-         j < Math.min(data.length, i + Math.floor(windowSize/2) + 1); 
-         j++) {
-      sum += data[j];
-      count++;
-    }
-    result.push(sum / count);
-  }
-  return result;
-};
 
 // Helper function to get start and end dates for a week
 const getWeekDates = (date: Date) => {
@@ -144,7 +118,6 @@ export default function GraphPage() {
         total
       }));
       
-      console.log('Fetched protein data:', proteinDataArray);
       setProteinData(proteinDataArray);
     } catch (err) {
       console.error('Error fetching protein data:', err);
@@ -221,351 +194,7 @@ export default function GraphPage() {
     // Force chart to reinitialize with new data
     ChartJS.unregister(CategoryScale);
     ChartJS.register(CategoryScale);
-    console.log('reinitialized');
   };
-
-const chartData = {
-    labels: metrics.map(metric => new Date(metric.created_at).toLocaleDateString()),
-    datasets: [
-      {
-        label: 'Skeletal Muscle Mass (kg)',
-        data: metrics.map(metric => metric.skeletal_muscle_mass),
-        borderColor: COLORS.primary,
-        backgroundColor: `${COLORS.primary}33`,
-        borderWidth: 2,
-        yAxisID: 'y',
-        tension: 0.4,
-      },
-      {
-        label: 'Body Fat (%)',
-        data: metrics.map(metric => metric.percent_body_fat),
-        borderColor: COLORS.secondary,
-        backgroundColor: `${COLORS.secondary}33`,
-        borderWidth: 2,
-        yAxisID: 'y1',
-        tension: 0.4,
-      },
-      {
-        label: 'Muscle Mass Goal',
-        data: Array(metrics.length).fill(goals.skeletal_muscle_mass),
-        borderColor: COLORS.primary,
-        borderDash: [5, 5],
-        borderWidth: 1,
-        pointRadius: 0,
-        yAxisID: 'y',
-        tension: 0,
-      },
-      {
-        label: 'Body Fat Goal',
-        data: Array(metrics.length).fill(goals.percent_body_fat),
-        borderColor: COLORS.secondary,
-        borderDash: [5, 5],
-        borderWidth: 1,
-        pointRadius: 0,
-        yAxisID: 'y1',
-        tension: 0,
-      },
-      {
-        label: 'Muscle Mass Trend',
-        data: calculateMovingAverage(metrics.map(metric => metric.skeletal_muscle_mass)),
-        borderColor: COLORS.primary,
-        borderWidth: 2,
-        pointRadius: 0,
-        yAxisID: 'y',
-        tension: 0.4,
-        borderDash: [2, 2],
-      },
-      {
-        label: 'Body Fat Trend',
-        data: calculateMovingAverage(metrics.map(metric => metric.percent_body_fat)),
-        borderColor: COLORS.secondary,
-        borderWidth: 2,
-        pointRadius: 0,
-        yAxisID: 'y1',
-        tension: 0.4,
-        borderDash: [2, 2],
-      }
-    ]
-  }
-
-  const options = {
-    responsive: true,
-    maintainAspectRatio: false,
-    interaction: {
-      mode: 'index' as const,
-      intersect: false,
-    },
-    plugins: {
-      legend: {
-        position: 'top' as const,
-        labels: {
-          color: COLORS.neutral,
-          font: {
-            family: 'Inter, system-ui, sans-serif',
-            size: 12
-          },
-          padding: 10,
-          filter: (item: LegendItem) => !item.text?.includes('Trend')
-        }
-      },
-      title: {
-        display: true,
-        text: 'Body Composition Metrics Over Time',
-        color: COLORS.neutral,
-        font: {
-          family: 'Inter, system-ui, sans-serif',
-          size: 16,
-          weight: 500
-        },
-        padding: {
-          top: 0,
-          bottom: 10
-        }
-      },
-      tooltip: {
-        backgroundColor: 'rgba(0, 0, 0, 0.8)',
-        titleColor: COLORS.neutral,
-        bodyColor: COLORS.neutral,
-        borderColor: 'rgba(255, 255, 255, 0.1)',
-        borderWidth: 1,
-        padding: 12,
-        bodyFont: {
-          family: 'Inter, system-ui, sans-serif'
-        },
-        titleFont: {
-          family: 'Inter, system-ui, sans-serif'
-        }
-      }
-    },
-    scales: {
-      x: {
-        grid: {
-          color: 'rgba(255, 255, 255, 0.1)',
-        },
-        ticks: {
-          color: COLORS.neutral,
-          font: {
-            family: 'Inter, system-ui, sans-serif'
-          }
-        }
-      },
-      y: {
-        type: 'linear' as const,
-        display: true,
-        position: 'left' as const,
-        grid: {
-          color: 'rgba(255, 255, 255, 0.1)',
-        },
-        ticks: {
-          color: COLORS.primary,
-          font: {
-            family: 'Inter, system-ui, sans-serif'
-          },
-          padding: 5
-        },
-        title: {
-          display: true,
-          text: 'Skeletal Muscle Mass (kg)',
-          color: COLORS.primary,
-          font: {
-            family: 'Inter, system-ui, sans-serif'
-          },
-          padding: {
-            top: 0,
-            bottom: 0
-          }
-        }
-      },
-      y1: {
-        type: 'linear' as const,
-        display: true,
-        position: 'right' as const,
-        grid: {
-          drawOnChartArea: false,
-        },
-        ticks: {
-          color: COLORS.secondary,
-          font: {
-            family: 'Inter, system-ui, sans-serif'
-          },
-          padding: 5
-        },
-        title: {
-          display: true,
-          text: 'Body Fat (%)',
-          color: COLORS.secondary,
-          font: {
-            family: 'Inter, system-ui, sans-serif'
-          },
-          padding: {
-            top: 0,
-            bottom: 0
-          }
-        }
-      },
-    },
-  }
-
-  // Protein chart data
-  const proteinChartData = {
-    labels: proteinData.map(item => {
-      const date = new Date(item.date);
-      return `${date.toLocaleDateString(undefined, { weekday: 'short' })} ${date.getDate()}`;
-    }),
-    datasets: [
-      {
-        label: 'Protein Intake (g)',
-        data: proteinData.map(item => {
-          console.log(`Protein intake for ${item.date}: ${item.total}g`);
-          return item.total;
-        }),
-        backgroundColor: COLORS.protein,
-        borderColor: COLORS.protein,
-        borderWidth: 1,
-        barThickness: 25,
-        maxBarThickness: 35
-      }
-    ]
-  };
-
-  // Separate goal line data
-  const proteinGoalData = {
-    labels: proteinData.map(item => {
-      const date = new Date(item.date);
-      return `${date.toLocaleDateString(undefined, { weekday: 'short' })} ${date.getDate()}`;
-    }),
-    datasets: [
-      {
-        label: 'Protein Goal',
-        data: Array(proteinData.length).fill(proteinGoal),
-        borderColor: `${COLORS.protein}88`,
-        borderDash: [5, 5],
-        borderWidth: 2,
-        pointRadius: 0,
-        tension: 0,
-        fill: false,
-      }
-    ]
-  };
-
-  // Calculate max protein value for better y-axis scaling
-  const maxProteinValue = Math.max(...proteinData.map(item => item.total), 0);
-  
-  const proteinChartOptions = {
-    responsive: true,
-    maintainAspectRatio: false,
-    animation: {
-      duration: 500 // Faster animations for smoother transitions
-    },
-    plugins: {
-      legend: {
-        position: 'top' as const,
-        labels: {
-          color: COLORS.neutral,
-          font: {
-            family: 'Inter, system-ui, sans-serif',
-            size: 12
-          },
-          padding: 10,
-        }
-      },
-      title: {
-        display: true,
-        text: 'Weekly Protein Intake',
-        color: COLORS.neutral,
-        font: {
-          family: 'Inter, system-ui, sans-serif',
-          size: 16,
-          weight: 500
-        },
-        padding: {
-          top: 0,
-          bottom: 10
-        }
-      },
-      tooltip: {
-        backgroundColor: 'rgba(0, 0, 0, 0.8)',
-        titleColor: COLORS.neutral,
-        bodyColor: COLORS.neutral,
-        borderColor: 'rgba(255, 255, 255, 0.1)',
-        borderWidth: 1,
-        padding: 12,
-        bodyFont: {
-          family: 'Inter, system-ui, sans-serif'
-        },
-        titleFont: {
-          family: 'Inter, system-ui, sans-serif'
-        }
-      }
-    },
-    scales: {
-      x: {
-        grid: {
-          color: 'rgba(255, 255, 255, 0.1)',
-        },
-        ticks: {
-          color: COLORS.neutral,
-          font: {
-            family: 'Inter, system-ui, sans-serif',
-            size: 11 // Slightly smaller font size
-          },
-          maxRotation: 45, // Allow some rotation for better spacing
-          minRotation: 45, // Ensure consistent rotation
-          autoSkip: true,
-          autoSkipPadding: 15 // Increased padding between labels
-        }
-      },
-      y: {
-      beginAtZero: true,
-        grid: {
-          color: 'rgba(255, 255, 255, 0.1)',
-        },
-        ticks: {
-          color: COLORS.neutral,
-          font: {
-            family: 'Inter, system-ui, sans-serif'
-          },
-          padding: 5,
-          stepSize: 40, // Larger step size to reduce number of ticks
-          maxTicksLimit: 8, // Limit number of ticks
-          precision: 0 // No decimal places
-        },
-        title: {
-          display: true,
-          text: 'Protein (g)',
-          color: COLORS.neutral,
-          font: {
-            family: 'Inter, system-ui, sans-serif'
-          },
-          padding: {
-            top: 0,
-            bottom: 0
-          }
-        },
-        suggestedMin: 0,
-        // Dynamic max value based on data and goal
-        suggestedMax: Math.max(proteinGoal * 1.2, maxProteinValue * 1.2, 240)
-      }
-    },
-    layout: {
-      padding: {
-        left: 15,
-        right: 15,
-        top: 20,
-        bottom: 10
-      }
-    }
-  };
-
-  // Effect to destroy and recreate charts when data changes
-  useEffect(() => {
-    // This will run when proteinData changes
-    return () => {
-      // Cleanup function to destroy any existing charts
-      ChartJS.unregister(CategoryScale);
-      ChartJS.register(CategoryScale);
-    };
-  }, [proteinData]);
 
   const handleAddMetric = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault()
@@ -644,62 +273,21 @@ const chartData = {
 
   // Format date range for display
   const { monday, sunday } = getWeekDates(currentWeek);
-  const dateRangeText = `${monday.toLocaleDateString()} - ${sunday.toLocaleDateString()}`;
-  
-  // Generate a unique key for charts to force re-rendering
-  const chartKey = `protein-chart-${currentWeek.getTime()}`;
+  const dateRangeText = `${monday.toLocaleDateString('en-US', { month: 'numeric', day: 'numeric' })} - ${sunday.toLocaleDateString('en-US', { month: 'numeric', day: 'numeric' })}`;
 
   return (
-    
     <div className="min-h-screen bg-black text-white flex flex-col">
       <Header onAddClick={() => dialogRef.current?.showModal()} />
-      <div className="flex-1 p-8">
-        <div className="bg-[#111111] rounded-lg shadow-2xl p-6 border border-gray-800">
-          <div className="w-full h-[400px]">
-            <Line options={options} data={chartData} />
-          </div>
-        </div>
-        
-        {/* Protein Intake Graph with Weekly Navigation */}
-        <div className="mt-8 bg-[#111111] rounded-lg shadow-2xl p-6 border border-gray-800">
-          <div className="flex justify-between items-center mb-4">
-            <button 
-              onClick={() => handleWeekChange(-1)}
-              className="p-2 rounded-full hover:bg-[#1a1a1a] transition-colors"
-              aria-label="Previous week"
-            >
-              <ChevronLeftIcon className="w-5 h-5" />
-            </button>
-            <h2 className="text-lg font-medium text-white/90">{dateRangeText}</h2>
-            <button 
-              onClick={() => handleWeekChange(1)}
-              className="p-2 rounded-full hover:bg-[#1a1a1a] transition-colors"
-              aria-label="Next week"
-            >
-              <ChevronRightIcon className="w-5 h-5" />
-            </button>
-          </div>
-          <div className="w-full h-[350px] relative">
-            <Bar 
-              key={chartKey} 
-              options={proteinChartOptions} 
-              data={proteinChartData} 
-            />
-            <div className="absolute inset-0 pointer-events-none">
-              <Line 
-                key={`${chartKey}-goal`}
-                options={{
-                  ...proteinChartOptions,
-                  plugins: {
-                    ...proteinChartOptions.plugins,
-                    legend: { display: false },
-                    tooltip: { enabled: false }
-                  }
-                }}
-                data={proteinGoalData}
-              />
-            </div>
-          </div>
+      <div className="p-4 gap-4">
+        <BodyCompositionChart metrics={metrics} goals={goals} />
+        <div className="mt-8">
+        <ProteinIntakeChart 
+          proteinData={proteinData}
+          proteinGoal={proteinGoal}
+          currentWeek={currentWeek}
+          dateRangeText={dateRangeText}
+          onWeekChange={handleWeekChange}
+        />
         </div>
         
         {/* Data Table */}
@@ -775,7 +363,6 @@ const chartData = {
              {new Date().toLocaleDateString()}
           </p>
           <form ref={formRef} onSubmit={handleAddMetric} className="p-6 min-w-[400px]">
-
             <div className="space-y-4">
               <div>
                 <label htmlFor="weight" className="block text-sm font-medium text-[#D9D9D9] mb-1">
