@@ -1,4 +1,4 @@
-import { Chart as ChartJS, CategoryScale, LinearScale, PointElement, LineElement, BarElement, Title, Tooltip, Legend, ChartData, ChartOptions } from 'chart.js';
+import { Chart as ChartJS, CategoryScale, LinearScale, PointElement, LineElement, BarElement, Title, Tooltip, Legend, ChartData } from 'chart.js';
 import { Chart as ReactChart } from 'react-chartjs-2';
 import { ChevronLeftIcon, ChevronRightIcon } from '@radix-ui/react-icons'
 
