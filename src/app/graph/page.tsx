@@ -19,6 +19,7 @@ import {
 import BodyCompositionChart from '@/components/BodyCompositionChart'
 import ProteinIntakeChart from '@/components/ProteinIntakeChart'
 import WorkoutVolumeChart from '@/components/WorkoutVolumeChart'
+import { createClientComponentClient } from '@supabase/auth-helpers-nextjs'
 
 ChartJS.register(
   CategoryScale,
@@ -88,6 +89,7 @@ export default function GraphPage() {
   const [proteinGoal, setProteinGoal] = useState<number>(160)
   const dialogRef = useRef<HTMLDialogElement>(null)
   const formRef = useRef<HTMLFormElement>(null)
+  const supabase = createClientComponentClient()
 
   const fetchProteinData = useCallback(async (weekDate: Date) => {
     try {
@@ -282,6 +284,28 @@ export default function GraphPage() {
       formRef.current?.reset()
     } catch (err) {
       setInputError(err instanceof Error ? err.message : 'Failed to add data')
+    }
+  }
+
+  const handleSignOut = async () => {
+    try {
+      // First, check if there's a session
+      const { data: { session } } = await supabase.auth.getSession()
+      
+      if (session) {
+        const { error } = await supabase.auth.signOut()
+        if (error) throw error
+      }
+      
+      // Always redirect regardless of session state
+      router.push('/auth/signin')
+      router.refresh() // Force a refresh to update auth state
+    } catch (error) {
+      console.error('Error signing out:', error)
+      
+      // Fallback: force redirect even if sign-out fails
+      router.push('/auth/signin')
+      router.refresh()
     }
   }
 

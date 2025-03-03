@@ -28,12 +28,8 @@ export default function SignInPage() {
     setToastVisible(true)
   }
 
-  // Redirect to graph page if user is already signed in
-  useEffect(() => {
-    if (user) {
-      router.push('/graph')
-    }
-  }, [user, router])
+  // Redirect is now handled by middleware
+  // No need for the useEffect redirect here
 
   const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault()

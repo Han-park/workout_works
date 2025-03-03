@@ -2,46 +2,44 @@ import { createMiddlewareClient } from '@supabase/auth-helpers-nextjs'
 import { NextResponse } from 'next/server'
 import type { NextRequest } from 'next/server'
 
+// Define public routes that don't require authentication
+const PUBLIC_ROUTES = ['/auth/signin', '/auth/signup', '/auth/callback', '/']
+
 export async function middleware(request: NextRequest) {
-  try {
-    // Create a response and supabase client
-    const res = NextResponse.next()
-    const supabase = createMiddlewareClient({ req: request, res })
-
-    // Refresh session if expired - this helps maintain the session
-    const {
-      data: { session },
-    } = await supabase.auth.getSession()
-
-    // Define public and protected routes
-    const isPublicRoute = ['/', '/auth/signin', '/auth/callback'].some(
-      route => request.nextUrl.pathname === route
-    )
-    const isProtectedRoute = ['/meal', '/graph', '/workout', '/profile'].some(
-      route => request.nextUrl.pathname.startsWith(route)
-    )
-
-    // Allow public routes regardless of auth status
-    if (isPublicRoute) {
-      return res
-    }
-
-    // Check protected routes
-    if (isProtectedRoute && !session) {
-      // Redirect to signin if accessing protected route without session
-      const redirectUrl = new URL('/auth/signin', request.nextUrl.origin)
-      redirectUrl.searchParams.set('redirectTo', request.nextUrl.pathname)
-      return NextResponse.redirect(redirectUrl)
-    }
-
-    return res
-  } catch (error) {
-    console.error('Middleware error:', error)
-    // On error, still allow the request to proceed
-    return NextResponse.next()
+  const response = NextResponse.next()
+  const supabase = createMiddlewareClient({ req: request, res: response })
+  
+  // Check if we have a session
+  const { data: { session } } = await supabase.auth.getSession()
+  
+  // Get the pathname from the request
+  const { pathname } = request.nextUrl
+  
+  // If no session and not a public route, redirect to sign in
+  if (!session && !PUBLIC_ROUTES.includes(pathname)) {
+    const redirectUrl = new URL('/auth/signin', request.url)
+    return NextResponse.redirect(redirectUrl)
   }
+  
+  // If we have a session and we're on a sign-in page, redirect to graph
+  if (session && pathname === '/auth/signin') {
+    const redirectUrl = new URL('/graph', request.url)
+    return NextResponse.redirect(redirectUrl)
+  }
+  
+  return response
 }
 
+// Specify which routes this middleware should run on
 export const config = {
-  matcher: ['/((?!_next/static|_next/image|favicon.ico).*)']
+  matcher: [
+    /*
+     * Match all request paths except for the ones starting with:
+     * - _next/static (static files)
+     * - _next/image (image optimization files)
+     * - favicon.ico (favicon file)
+     * - public (public files)
+     */
+    '/((?!_next/static|_next/image|favicon.ico|public).*)',
+  ],
 } 
