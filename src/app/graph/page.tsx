@@ -324,8 +324,6 @@ export default function GraphPage() {
           <WorkoutVolumeChart 
             volumeData={volumeData}
             currentWeek={currentWeek}
-            dateRangeText={dateRangeText}
-            onWeekChange={handleWeekChange}
           />
         </div>
         </div>

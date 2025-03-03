@@ -1,6 +1,6 @@
 'use client'
 
-import { useEffect, useState, useRef } from 'react'
+import { useEffect, useState, useRef, useCallback } from 'react'
 import { supabase } from '@/lib/supabase'
 import Header from '@/components/Header'
 import { ChevronLeftIcon, ChevronRightIcon, PlusIcon, MagicWandIcon, TrashIcon } from '@radix-ui/react-icons'
@@ -95,7 +95,8 @@ export default function WorkoutPage() {
     setIsFreeweight(e.target.checked)
   }
 
-  const predictMuscleGroup = async (exerciseName: string) => {
+  // Wrap predictMuscleGroup in useCallback
+  const predictMuscleGroup = useCallback(async (exerciseName: string) => {
     if (!exerciseName || exerciseName.trim() === '') return
     
     setPredictingMuscleGroup(true)
@@ -120,13 +121,16 @@ export default function WorkoutPage() {
       
       if (data.muscleGroup) {
         setPredictedMuscleGroup(data.muscleGroup)
+      } else {
+        setPredictedMuscleGroup('')
       }
     } catch (error) {
-      console.error('Error predicting muscle group:', error instanceof Error ? error.message : error)
+      console.error('Error predicting muscle group:', error)
+      setPredictedMuscleGroup('')
     } finally {
       setPredictingMuscleGroup(false)
     }
-  }
+  }, [muscleGroups]) // Add dependencies
 
   // Load saved form data from localStorage on initial render
   useEffect(() => {

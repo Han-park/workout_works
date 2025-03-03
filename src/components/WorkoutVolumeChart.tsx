@@ -12,7 +12,6 @@ import {
   ChartData 
 } from 'chart.js';
 import { Chart as ReactChart } from 'react-chartjs-2';
-import { ChevronLeftIcon, ChevronRightIcon } from '@radix-ui/react-icons';
 
 ChartJS.register(
   CategoryScale,
@@ -39,16 +38,12 @@ const COLORS = {
 interface WorkoutVolumeChartProps {
   volumeData: VolumeData[]
   currentWeek: Date
-  dateRangeText: string
-  onWeekChange: (weeks: number) => void
   className?: string
 }
 
 export default function WorkoutVolumeChart({ 
   volumeData, 
-  currentWeek, 
-  dateRangeText,
-  onWeekChange 
+  currentWeek
 }: WorkoutVolumeChartProps) {
   // Generate a unique key for charts to force re-rendering
   const chartKey = `volume-chart-${currentWeek.getTime()}`
@@ -182,23 +177,6 @@ export default function WorkoutVolumeChart({
 
   return (
     <div className="px-6 pb-6">
-      {/* <div className="flex justify-between items-center mb-4">
-        <button
-          onClick={() => onWeekChange(-1)}
-          className="flex items-center text-neutral-300 hover:text-white transition-colors"
-        >
-          <ChevronLeftIcon className="h-5 w-5" />
-          Previous
-        </button>
-        <span className="text-md text-neutral-300">{dateRangeText}</span>
-        <button
-          onClick={() => onWeekChange(1)}
-          className="flex items-center text-neutral-300 hover:text-white transition-colors"
-        >
-          Next
-          <ChevronRightIcon className="h-5 w-5" />
-        </button>
-      </div> */}
       <div className="w-full h-[400px]">
         <ReactChart
           key={chartKey}
