@@ -1,7 +1,6 @@
 'use client'
 
 import { useEffect, useState, useRef, useCallback } from 'react'
-import { supabase } from '@/lib/supabase'
 import Header from '@/components/Header'
 import { useAuth } from '@/contexts/AuthContext'
 import { useRouter } from 'next/navigation'
@@ -132,7 +131,7 @@ export default function GraphPage() {
       console.error('Error fetching protein data:', err);
       setError(err instanceof Error ? err.message : 'Failed to fetch protein data');
     }
-  }, [user]);
+  }, [user, supabase]);
 
   const fetchVolumeData = useCallback(async (weekDate: Date) => {
     try {
@@ -154,70 +153,85 @@ export default function GraphPage() {
     }
   }, [user]);
 
-  useEffect(() => {
-    if (!user) {
-      router.push('/auth/signin')
-      return
+  const fetchMetrics = useCallback(async () => {
+    try {
+      const { data: metricsData, error: metricsError } = await supabase
+        .from('metric')
+        .select('*')
+        .eq('UID', user?.id || '')
+        .order('created_at', { ascending: true });
+
+      if (metricsError) throw metricsError;
+
+      // Sort the metrics data
+      const sortedData = [...(metricsData || [])].sort((a, b) => 
+        new Date(a.created_at).getTime() - new Date(b.created_at).getTime()
+      );
+
+      setMetrics(sortedData);
+    } catch (err) {
+      console.error('Error fetching metrics:', err);
+      setError(err instanceof Error ? err.message : 'Failed to fetch metrics');
     }
+  }, [user, supabase]);
 
+  const fetchGoal = useCallback(async () => {
+    try {
+      // Fetch latest goal
+      const { data: goalData, error: goalError } = await supabase
+        .from('goal')
+        .select('skeletal_muscle_mass, percent_body_fat')
+        .eq('UID', user?.id || '')
+        .order('created_at', { ascending: false })
+        .limit(1);
+
+      if (goalError) throw goalError;
+
+      if (goalData && goalData.length > 0) {
+        setGoals(goalData[0]);
+      }
+
+      // Fetch latest weight for protein goal calculation
+      const { data: weightData } = await supabase
+        .from('metric')
+        .select('weight')
+        .eq('UID', user?.id || '')
+        .order('created_at', { ascending: false })
+        .limit(1);
+
+      if (weightData && weightData.length > 0 && weightData[0].weight) {
+        setProteinGoal(Math.round(weightData[0].weight * 2));
+      }
+    } catch (err) {
+      console.error('Error fetching goal:', err);
+      setError(err instanceof Error ? err.message : 'Failed to fetch goal');
+    }
+  }, [user, supabase]);
+
+  useEffect(() => {
     async function fetchData() {
+      if (!user) {
+        return;
+      }
+
       try {
-        // Fetch metrics
-        const { data: metricsData, error: metricsError } = await supabase
-          .from('metric')
-          .select('*')
-          .eq('UID', user?.id || '')
-          .order('created_at', { ascending: true })
-
-        if (metricsError) throw metricsError
-
-        // Sort the metrics data
-        const sortedData = [...(metricsData || [])].sort((a, b) => 
-          new Date(a.created_at).getTime() - new Date(b.created_at).getTime()
-        )
-
-        setMetrics(sortedData)
-
-        // Fetch latest goal
-        const { data: goalData, error: goalError } = await supabase
-          .from('goal')
-          .select('skeletal_muscle_mass, percent_body_fat')
-          .eq('UID', user?.id || '')
-          .order('created_at', { ascending: false })
-          .limit(1)
-
-        if (goalError) throw goalError
-
-        if (goalData && goalData.length > 0) {
-          setGoals(goalData[0])
-        }
-
-        // Fetch latest weight for protein goal calculation
-        const { data: weightData } = await supabase
-          .from('metric')
-          .select('weight')
-          .eq('UID', user?.id || '')
-          .order('created_at', { ascending: false })
-          .limit(1)
-
-        if (weightData && weightData.length > 0 && weightData[0].weight) {
-          setProteinGoal(Math.round(weightData[0].weight * 2));
-        }
-
-        // Fetch protein data for the current week
-        await fetchProteinData(currentWeek);
-        
-        // Fetch workout volume data for the current week
-        await fetchVolumeData(currentWeek);
+        setLoading(true);
+        await Promise.all([
+          fetchMetrics(),
+          fetchGoal(),
+          fetchProteinData(currentWeek),
+          fetchVolumeData(currentWeek)
+        ]);
       } catch (err) {
-        setError(err instanceof Error ? err.message : 'An error occurred')
+        console.error('Error fetching data:', err);
+        setError(err instanceof Error ? err.message : 'Failed to fetch data');
       } finally {
-        setLoading(false)
+        setLoading(false);
       }
     }
 
-    fetchData()
-  }, [user, router, currentWeek, fetchProteinData, fetchVolumeData])
+    fetchData();
+  }, [user, router, currentWeek, fetchProteinData, fetchVolumeData, fetchMetrics, fetchGoal]);
 
   const handleWeekChange = (weeks: number) => {
     const newDate = new Date(currentWeek);
@@ -284,28 +298,6 @@ export default function GraphPage() {
       formRef.current?.reset()
     } catch (err) {
       setInputError(err instanceof Error ? err.message : 'Failed to add data')
-    }
-  }
-
-  const handleSignOut = async () => {
-    try {
-      // First, check if there's a session
-      const { data: { session } } = await supabase.auth.getSession()
-      
-      if (session) {
-        const { error } = await supabase.auth.signOut()
-        if (error) throw error
-      }
-      
-      // Always redirect regardless of session state
-      router.push('/auth/signin')
-      router.refresh() // Force a refresh to update auth state
-    } catch (error) {
-      console.error('Error signing out:', error)
-      
-      // Fallback: force redirect even if sign-out fails
-      router.push('/auth/signin')
-      router.refresh()
     }
   }
 

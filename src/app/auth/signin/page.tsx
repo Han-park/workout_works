@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useState } from 'react'
 import { useAuth } from '@/contexts/AuthContext'
 import { useRouter } from 'next/navigation'
 import { EnvelopeClosedIcon, LockClosedIcon } from '@radix-ui/react-icons'
@@ -13,7 +13,7 @@ export default function SignInPage() {
   const [loading, setLoading] = useState(false)
   const [message, setMessage] = useState<string | null>(null)
   const [usePassword, setUsePassword] = useState(false)
-  const { signInWithEmail, signInWithPassword, user } = useAuth()
+  const { signInWithEmail, signInWithPassword } = useAuth()
   const router = useRouter()
   
   // Toast state
