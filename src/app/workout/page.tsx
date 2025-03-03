@@ -35,6 +35,9 @@ export default function WorkoutPage() {
   const [predictingMuscleGroup, setPredictingMuscleGroup] = useState(false)
   const [predictedMuscleGroup, setPredictedMuscleGroup] = useState<string>('')
   const [lastPredictedName, setLastPredictedName] = useState<string>('')
+  const [exerciseName, setExerciseName] = useState('')
+  const [brandName, setBrandName] = useState('')
+  const [totalVolume, setTotalVolume] = useState('')
   const formRef = useRef<HTMLFormElement>(null)
   const debounceTimerRef = useRef<NodeJS.Timeout | null>(null)
   const [muscleGroups] = useState([
@@ -125,8 +128,53 @@ export default function WorkoutPage() {
     }
   }
 
+  // Load saved form data from localStorage on initial render
+  useEffect(() => {
+    if (typeof window !== 'undefined') {
+      const savedFormData = localStorage.getItem('workoutFormData')
+      if (savedFormData) {
+        try {
+          const parsedData = JSON.parse(savedFormData)
+          setExerciseName(parsedData.exerciseName || '')
+          setBrandName(parsedData.brandName || '')
+          setContent(parsedData.content || '')
+          setTotalVolume(parsedData.totalVolume || '')
+          setIsFreeweight(parsedData.isFreeweight || false)
+          setPredictedMuscleGroup(parsedData.predictedMuscleGroup || '')
+          
+          // If we have a saved exercise name and it's different from the last predicted one,
+          // we should trigger muscle group prediction
+          if (parsedData.exerciseName && parsedData.exerciseName !== lastPredictedName) {
+            setLastPredictedName(parsedData.exerciseName)
+            predictMuscleGroup(parsedData.exerciseName)
+          }
+        } catch (error) {
+          console.error('Error parsing saved form data:', error)
+          // Clear invalid data
+          localStorage.removeItem('workoutFormData')
+        }
+      }
+    }
+  }, [lastPredictedName, predictMuscleGroup])
+
+  // Save form data to localStorage whenever it changes
+  useEffect(() => {
+    if (typeof window !== 'undefined') {
+      const formData = {
+        exerciseName: exerciseName,
+        brandName: brandName,
+        content: content,
+        totalVolume: totalVolume,
+        isFreeweight: isFreeweight,
+        predictedMuscleGroup: predictedMuscleGroup
+      }
+      localStorage.setItem('workoutFormData', JSON.stringify(formData))
+    }
+  }, [exerciseName, brandName, content, totalVolume, isFreeweight, predictedMuscleGroup])
+
   const handleExerciseNameChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const exerciseName = e.target.value
+    const name = e.target.value
+    setExerciseName(name)
     
     // Clear any existing timer
     if (debounceTimerRef.current) {
@@ -138,17 +186,25 @@ export default function WorkoutPage() {
     // 2. Not already predicting
     // 3. Name has changed significantly from last prediction (at least 3 characters different)
     const shouldPredict = 
-      exerciseName.length > 3 && 
+      name.length > 3 && 
       !predictingMuscleGroup && 
-      (lastPredictedName === '' || Math.abs(exerciseName.length - lastPredictedName.length) > 2 || !exerciseName.includes(lastPredictedName.substring(0, 3)));
+      (lastPredictedName === '' || Math.abs(name.length - lastPredictedName.length) > 2 || !name.includes(lastPredictedName.substring(0, 3)));
     
     if (shouldPredict) {
       // Set a longer debounce time to reduce API calls
       debounceTimerRef.current = setTimeout(() => {
-        setLastPredictedName(exerciseName);
-        predictMuscleGroup(exerciseName);
+        setLastPredictedName(name);
+        predictMuscleGroup(name);
       }, 800) // Increased from 500ms to 800ms
     }
+  }
+
+  const handleBrandNameChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    setBrandName(e.target.value)
+  }
+  
+  const handleTotalVolumeChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    setTotalVolume(e.target.value)
   }
 
   const calculateVolume = async () => {
@@ -210,15 +266,8 @@ export default function WorkoutPage() {
       return
     }
 
-    const formData = new FormData(e.currentTarget)
-    const exerciseName = formData.get('exerciseName') as string
-    const brandName = isFreeweight ? null : formData.get('brandName') as string
-    const content = formData.get('content') as string
-    const totalVolume = formData.get('totalVolume') as string
-    const targetMuscleGroup = formData.get('targetMuscleGroup') as string
-
     // Validate inputs
-    if (!exerciseName || !content || !targetMuscleGroup) {
+    if (!exerciseName || !content || !predictedMuscleGroup) {
       setInputError('Please fill in all required fields (exercise name, content, and target muscle group)')
       return
     }
@@ -238,7 +287,7 @@ export default function WorkoutPage() {
           is_freeweight: isFreeweight,
           content: content,
           total_volume: totalVolume ? Number(totalVolume) : null,
-          target_muscle_group: targetMuscleGroup,
+          target_muscle_group: predictedMuscleGroup,
           UID: user.id
         }])
         .select()
@@ -247,12 +296,18 @@ export default function WorkoutPage() {
 
       setExercises((prev: Exercise[]) => [data[0], ...prev])
       formRef.current?.reset()
+      
+      // Clear form data from state and localStorage after successful submission
       setContent('')
+      setExerciseName('')
+      setBrandName('')
+      setTotalVolume('')
       setVolumeResult(null)
       setVolumeEquation(null)
       setIsFreeweight(false)
       setPredictedMuscleGroup('')
       setLastPredictedName('')
+      localStorage.removeItem('workoutFormData')
     } catch (error: unknown) {
       setInputError(error instanceof Error ? error.message : 'Failed to add exercise')
     }
@@ -372,6 +427,7 @@ export default function WorkoutPage() {
                   placeholder="Exercise name (e.g. Bench Press, Squat)"
                   className="w-full px-3 py-2 bg-[#1a1a1a] border border-gray-800 rounded-md text-white focus:outline-none focus:ring-2 focus:ring-[#D8110A]"
                   onChange={handleExerciseNameChange}
+                  value={exerciseName}
                 />
                 {predictingMuscleGroup && (
                   <div className="absolute right-3 top-1/2 -translate-y-1/2 text-xs text-white/50">
@@ -401,6 +457,8 @@ export default function WorkoutPage() {
                 placeholder="Brand name (optional)"
                 disabled={isFreeweight}
                 className={`flex-1 px-3 py-2 bg-[#1a1a1a] border border-gray-800 rounded-md text-white focus:outline-none focus:ring-2 focus:ring-[#D8110A] ${isFreeweight ? 'opacity-50 cursor-not-allowed' : ''}`}
+                onChange={handleBrandNameChange}
+                value={brandName}
               />
               
               <label className="w-1/3 text-white/70 text-sm flex items-center gap-2 px-3 py-2 bg-[#1a1a1a] border border-gray-800 rounded-md">
@@ -434,6 +492,8 @@ export default function WorkoutPage() {
                 placeholder="Total volume (kg)"
                 min="0"
                 className="flex-1 px-3 py-2 bg-[#1a1a1a] border border-gray-800 rounded-md text-white focus:outline-none focus:ring-2 focus:ring-[#D8110A] [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
+                onChange={handleTotalVolumeChange}
+                value={totalVolume}
               />
               <button
                 type="button"

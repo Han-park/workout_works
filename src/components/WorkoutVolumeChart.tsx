@@ -181,8 +181,8 @@ export default function WorkoutVolumeChart({
   };
 
   return (
-    <div className="bg-[#111111] rounded-lg shadow-2xl p-6 border border-gray-800">
-      <div className="flex justify-between items-center mb-4">
+    <div className="px-6 pb-6">
+      {/* <div className="flex justify-between items-center mb-4">
         <button
           onClick={() => onWeekChange(-1)}
           className="flex items-center text-neutral-300 hover:text-white transition-colors"
@@ -198,7 +198,7 @@ export default function WorkoutVolumeChart({
           Next
           <ChevronRightIcon className="h-5 w-5" />
         </button>
-      </div>
+      </div> */}
       <div className="w-full h-[400px]">
         <ReactChart
           key={chartKey}

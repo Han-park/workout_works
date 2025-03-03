@@ -310,22 +310,24 @@ export default function GraphPage() {
       <Header onAddClick={() => dialogRef.current?.showModal()} />
       <div className="p-4 gap-4">
         <BodyCompositionChart metrics={metrics} goals={goals} />
-        <div className="mt-8">
-          <ProteinIntakeChart 
-            proteinData={proteinData}
+        <div className="mt-8 bg-[#111111] rounded-lg shadow-2xl border border-gray-800">
+          <div className="">
+            <ProteinIntakeChart 
+              proteinData={proteinData}
             proteinGoal={proteinGoal}
             currentWeek={currentWeek}
             dateRangeText={dateRangeText}
             onWeekChange={handleWeekChange}
           />
         </div>
-        <div className="mt-8">
+        <div className="">
           <WorkoutVolumeChart 
             volumeData={volumeData}
             currentWeek={currentWeek}
             dateRangeText={dateRangeText}
             onWeekChange={handleWeekChange}
           />
+        </div>
         </div>
         
         {/* Data Table */}

@@ -1,6 +1,6 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { useAuth } from '@/contexts/AuthContext'
 import { useRouter } from 'next/navigation'
 import { EnvelopeClosedIcon, LockClosedIcon } from '@radix-ui/react-icons'
@@ -12,8 +12,15 @@ export default function SignInPage() {
   const [loading, setLoading] = useState(false)
   const [message, setMessage] = useState<string | null>(null)
   const [usePassword, setUsePassword] = useState(false)
-  const { signInWithEmail, signInWithPassword } = useAuth()
+  const { signInWithEmail, signInWithPassword, user } = useAuth()
   const router = useRouter()
+
+  // Redirect to graph page if user is already signed in
+  useEffect(() => {
+    if (user) {
+      router.push('/graph')
+    }
+  }, [user, router])
 
   const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault()
@@ -24,7 +31,7 @@ export default function SignInPage() {
     try {
       if (usePassword) {
         await signInWithPassword(email, password)
-        router.push('/meal')
+        router.push('/graph')
       } else {
         await signInWithEmail(email)
         setMessage('Check your email for the magic link!')
