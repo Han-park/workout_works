@@ -4,6 +4,7 @@ import { useState, useEffect } from 'react'
 import { useAuth } from '@/contexts/AuthContext'
 import { useRouter } from 'next/navigation'
 import { EnvelopeClosedIcon, LockClosedIcon } from '@radix-ui/react-icons'
+import Toast, { ToastType } from '@/components/Toast'
 
 export default function SignInPage() {
   const [email, setEmail] = useState('')
@@ -14,6 +15,18 @@ export default function SignInPage() {
   const [usePassword, setUsePassword] = useState(false)
   const { signInWithEmail, signInWithPassword, user } = useAuth()
   const router = useRouter()
+  
+  // Toast state
+  const [toastMessage, setToastMessage] = useState('')
+  const [toastType, setToastType] = useState<ToastType>('info')
+  const [toastVisible, setToastVisible] = useState(false)
+
+  // Function to show toast
+  const showToast = (message: string, type: ToastType = 'info') => {
+    setToastMessage(message)
+    setToastType(type)
+    setToastVisible(true)
+  }
 
   // Redirect to graph page if user is already signed in
   useEffect(() => {
@@ -30,14 +43,20 @@ export default function SignInPage() {
 
     try {
       if (usePassword) {
+        showToast('Signing in with password...', 'info')
         await signInWithPassword(email, password)
+        showToast('Sign in successful! Redirecting...', 'success')
         router.push('/graph')
       } else {
+        showToast('Sending magic link...', 'info')
         await signInWithEmail(email)
         setMessage('Check your email for the magic link!')
+        showToast('Magic link sent! Check your email.', 'success')
       }
     } catch (error) {
-      setError(error instanceof Error ? error.message : 'An error occurred')
+      const errorMessage = error instanceof Error ? error.message : 'An error occurred'
+      setError(errorMessage)
+      showToast(errorMessage, 'error')
     } finally {
       setLoading(false)
     }
@@ -130,6 +149,15 @@ export default function SignInPage() {
           </div>
         )}
       </div>
+      
+      {/* Toast component */}
+      <Toast
+        message={toastMessage}
+        type={toastType}
+        visible={toastVisible}
+        onClose={() => setToastVisible(false)}
+        duration={5000}
+      />
     </div>
   )
 } 
