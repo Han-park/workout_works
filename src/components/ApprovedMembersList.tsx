@@ -28,11 +28,11 @@ export default function ApprovedMembersList({ approvedUserIds }: { approvedUserI
       }
 
       try {
-        console.log('=== DEBUGGING APPROVED MEMBERS LIST ===')
-        console.log('Approved User IDs:', approvedUserIds)
+        // console.log('=== DEBUGGING APPROVED MEMBERS LIST ===')
+        // console.log('Approved User IDs:', approvedUserIds)
         
-        // Now try to get data from the profiles table for all users
-        console.log('Querying profiles table for all approved users')
+        // // Now try to get data from the profiles table for all users
+        // console.log('Querying profiles table for all approved users')
         
         try {
           // Get all profiles
@@ -45,10 +45,10 @@ export default function ApprovedMembersList({ approvedUserIds }: { approvedUserI
             throw error
           }
           
-          console.log('All profiles query result:', allProfiles)
+          // console.log('All profiles query result:', allProfiles)
           
           if (!allProfiles || allProfiles.length === 0) {
-            console.log('No profiles found, falling back to basic data')
+            // console.log('No profiles found, falling back to basic data')
             throw new Error('No profiles found')
           }
           
@@ -58,7 +58,7 @@ export default function ApprovedMembersList({ approvedUserIds }: { approvedUserI
             approvedUserIds.includes(profile.UID)
           )
           
-          console.log('Matching profiles after filtering:', matchingProfiles)
+          // console.log('Matching profiles after filtering:', matchingProfiles)
           
           if (matchingProfiles.length > 0) {
             // Process profiles data
@@ -71,10 +71,10 @@ export default function ApprovedMembersList({ approvedUserIds }: { approvedUserI
               }
             })
             
-            console.log('Processed members:', JSON.stringify(allMembers, null, 2))
+            // console.log('Processed members:', JSON.stringify(allMembers, null, 2))
             
             // Avatar URLs are already full URLs, no need to process them
-            console.log('Final members:', JSON.stringify(allMembers, null, 2))
+            // console.log('Final members:', JSON.stringify(allMembers, null, 2))
             setMembers(allMembers)
             setLoading(false)
             return

@@ -46,8 +46,7 @@ export default async function Home() {
             Workout Works
           </h1>
           <p className="text-sm text-gray-300 max-w-2xl mx-auto">
-            Track your fitness journey, connect with fellow fitness enthusiasts, and achieve your goals. 
-            Monitor your meals, workouts, and body composition all in one place.
+            Workout Works is a community. We build muscles, and get consistency in our daily lives.
           </p>
         </div>
 
