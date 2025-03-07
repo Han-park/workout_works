@@ -46,7 +46,7 @@ export async function GET(request: NextRequest) {
             last_sign_in_at: profileData.last_activity
           })
         }
-      } catch (err) {
+      } catch {
         // If both methods fail, return a basic response with just the ID
         return NextResponse.json({
           id: userId,

@@ -7,8 +7,8 @@ import { createServerComponentClient } from '@supabase/auth-helpers-nextjs'
 
 export const revalidate = 60 // revalidate every minute
 
-// Define the member type
-interface Member {
+// Define the approved member type for type safety
+type ApprovedMember = {
   id: string
   display_name?: string
   avatar_url?: string
@@ -16,7 +16,7 @@ interface Member {
 }
 
 // Function to fetch approved users
-async function getApprovedMembers() {
+async function getApprovedMembers(): Promise<ApprovedMember[]> {
   try {
     const cookieStore = cookies()
     const supabase = createServerComponentClient({ cookies: () => cookieStore })
@@ -40,7 +40,7 @@ async function getApprovedMembers() {
     const approvedUserIds = approvedUsers.map(user => user.UID)
     
     // Get user data directly from auth.users using their IDs
-    const usersWithProfiles = []
+    const usersWithProfiles: ApprovedMember[] = []
     
     for (const userId of approvedUserIds) {
       try {
