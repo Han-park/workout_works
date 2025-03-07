@@ -411,42 +411,56 @@ export default function WorkoutPage() {
         {isViewingSelf ? (
           <form ref={formRef} onSubmit={handleAddExercise} className="bg-[#111111] p-4 rounded-lg border border-gray-800">
             <div className="flex flex-col gap-3">
-              <div className="flex gap-2">
-                <input
-                  type="text"
-                  name="exerciseName"
-                  placeholder="Exercise name"
-                  value={exerciseName}
-                  onChange={handleExerciseNameChange}
-                  className="flex-1 px-3 py-2 bg-[#1a1a1a] border border-gray-800 rounded-md text-white focus:outline-none focus:ring-2 focus:ring-[#D8110A]"
-                />
-                <input
-                  type="text"
-                  name="brandName"
-                  placeholder="Brand (optional)"
-                  value={brandName}
-                  onChange={handleBrandNameChange}
-                  className="flex-1 px-3 py-2 bg-[#1a1a1a] border border-gray-800 rounded-md text-white focus:outline-none focus:ring-2 focus:ring-[#D8110A]"
-                />
+              {/* Row 1: Exercise Name and Muscle Group Prediction */}
+              <div className="flex gap-2 items-center">
+                <div className="flex-grow">
+                  <input
+                    type="text"
+                    name="exerciseName"
+                    placeholder="Exercise name (e.g. Bench Press, Squat)"
+                    value={exerciseName}
+                    onChange={handleExerciseNameChange}
+                    className="w-full px-3 py-2 bg-[#1a1a1a] border border-gray-800 rounded-md text-white focus:outline-none focus:ring-2 focus:ring-[#D8110A]"
+                  />
+                </div>
+                
+                <div className="w-20 text-center">
+                  {predictingMuscleGroup ? (
+                    <span className="text-sm text-white/50">Predicting...</span>
+                  ) : predictedMuscleGroup ? (
+                    <span className="text-sm text-[#D8110A] capitalize">{predictedMuscleGroup}</span>
+                  ) : (
+                    <span className="text-xs text-white/30">Muscle Group</span>
+                  )}
+                </div>
               </div>
               
-              <div className="flex items-center gap-2">
-                <label className="flex items-center gap-2 text-white/70">
+              {/* Row 2: Brand Name and Free Weight Checkbox */}
+              <div className="flex gap-2 items-center">
+                <div className="flex-1">
                   <input
-                    type="checkbox"
-                    name="isFreeweight"
-                    checked={isFreeweight}
-                    onChange={handleFreeweightChange}
-                    className="w-4 h-4 bg-[#1a1a1a] border border-gray-800 rounded focus:ring-[#D8110A] focus:ring-2"
+                    type="text"
+                    name="brandName"
+                    placeholder="Brand name (optional)"
+                    value={brandName}
+                    onChange={handleBrandNameChange}
+                    disabled={isFreeweight}
+                    className={`w-full px-3 py-2 bg-[#1a1a1a] border border-gray-800 rounded-md text-white focus:outline-none focus:ring-2 focus:ring-[#D8110A] ${isFreeweight ? 'opacity-50 cursor-not-allowed' : ''}`}
                   />
-                  Free Weight
-                </label>
+                </div>
                 
-                {predictingMuscleGroup ? (
-                  <span className="text-sm text-white/50">Predicting muscle group...</span>
-                ) : predictedMuscleGroup ? (
-                  <span className="text-sm text-[#D8110A]">Muscle group: {predictedMuscleGroup}</span>
-                ) : null}
+                <div className="w-28">
+                  <label className="flex items-center gap-2 text-white/70 text-xs">
+                    <input
+                      type="checkbox"
+                      name="isFreeweight"
+                      checked={isFreeweight}
+                      onChange={handleFreeweightChange}
+                      className="w-4 h-4 bg-[#1a1a1a] border border-gray-800 rounded focus:ring-[#D8110A] focus:ring-2"
+                    />
+                    Free Weight
+                  </label>
+                </div>
               </div>
               
               <textarea
@@ -532,12 +546,16 @@ export default function WorkoutPage() {
                     <p className="text-sm text-white/50">
                       {exercise.brand_name && `${exercise.brand_name} • `}
                       {exercise.is_freeweight ? 'Free Weight' : 'Machine'} • 
-                      {exercise.target_muscle_group && ` ${exercise.target_muscle_group} • `}
-                      {exercise.total_volume}kg
+                      {exercise.target_muscle_group && ` ${exercise.target_muscle_group}`}
                     </p>
                     <pre className="mt-2 text-sm text-white/70 font-mono whitespace-pre-wrap overflow-auto max-h-40">
                       {exercise.content}
                     </pre>
+                    {exercise.total_volume > 0 && (
+                      <p className="mt-2 text-sm text-[#D8110A]">
+                        Total volume: {exercise.total_volume}kg
+                      </p>
+                    )}
                   </div>
                   
                   {/* Only show delete button if viewing own data */}
