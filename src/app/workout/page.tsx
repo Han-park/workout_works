@@ -449,7 +449,7 @@ export default function WorkoutPage() {
                   />
                 </div>
                 
-                <div className="w-28">
+                <div className="w-28 items-center">
                   <label className="flex items-center gap-2 text-white/70 text-xs">
                     <input
                       type="checkbox"
