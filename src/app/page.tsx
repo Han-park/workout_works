@@ -2,6 +2,8 @@ import Image from 'next/image'
 import Link from 'next/link'
 import { formatDistanceToNow } from 'date-fns'
 import styles from './styles.module.css' // Import the CSS module
+import { cookies } from 'next/headers'
+import { createServerComponentClient } from '@supabase/auth-helpers-nextjs'
 
 export const revalidate = 60 // revalidate every minute
 
@@ -13,42 +15,92 @@ interface Member {
   last_activity?: string
 }
 
-// Temporarily commented out member fetching functionality
-/*
-async function getMembers() {
+// Function to fetch approved users
+async function getApprovedMembers() {
   try {
-    const supabase = createServerComponentClient({ cookies })
+    const cookieStore = cookies()
+    const supabase = createServerComponentClient({ cookies: () => cookieStore })
     
-    // Get the current session
-    const { data: { session } } = await supabase.auth.getSession()
-    if (session?.user) {
-      console.log('Logged in user ID:', session.user.id)
-    } else {
-      console.log('Not logged in')
-    }
-
-    const { data: users, error } = await supabase
-      .from('profiles')
-      .select('id, display_name, avatar_url, last_activity')
-      .order('last_activity', { ascending: false })
-      .limit(10)
-
-    if (error) {
-      console.error('Error fetching members:', error.message, error.details, error.hint)
+    // First, get all approved user IDs from user_approval table
+    const { data: approvedUsers, error: approvalError } = await supabase
+      .from('user_approval')
+      .select('UID')
+      .eq('is_approved', true)
+    
+    if (approvalError) {
+      console.error('Error fetching approved users:', approvalError.message)
       return []
     }
-
-    return users || []
+    
+    if (!approvedUsers || approvedUsers.length === 0) {
+      return []
+    }
+    
+    // Extract the approved user IDs
+    const approvedUserIds = approvedUsers.map(user => user.UID)
+    
+    // Get user data directly from auth.users using their IDs
+    const usersWithProfiles = []
+    
+    for (const userId of approvedUserIds) {
+      try {
+        // Get user data from auth.users via the API route
+        const response = await fetch(`/api/get-user?userId=${userId}`, {
+          method: 'GET',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+        });
+        
+        if (!response.ok) {
+          console.error(`Error fetching user ${userId}: ${response.statusText}`);
+          continue;
+        }
+        
+        const userData = await response.json();
+        
+        if (userData) {
+          usersWithProfiles.push({
+            id: userId,
+            display_name: userData.display_name || 'Anonymous User',
+            avatar_url: userData.avatar_url || null,
+            last_activity: userData.last_sign_in_at || null
+          });
+        }
+      } catch (error) {
+        console.error(`Error processing user ${userId}:`, error);
+      }
+    }
+    
+    // Process the profiles to get public URLs for avatar images
+    const processedProfiles = usersWithProfiles.map(profile => {
+      let publicAvatarUrl = profile.avatar_url
+      
+      // If avatar_url exists and doesn't already contain a full URL
+      if (profile.avatar_url && !profile.avatar_url.startsWith('http')) {
+        // Get the public URL for the avatar
+        const { data } = supabase.storage
+          .from('profile_picture')
+          .getPublicUrl(profile.avatar_url)
+        
+        publicAvatarUrl = data.publicUrl
+      }
+      
+      return {
+        ...profile,
+        avatar_url: publicAvatarUrl
+      }
+    })
+    
+    return processedProfiles
   } catch (error) {
     console.error('Unexpected error:', error)
     return []
   }
 }
-*/
 
 export default async function Home() {
-  // const members = await getMembers()
-  const members: Member[] = [] // Temporary empty array while profile fetching is disabled
+  const members = await getApprovedMembers()
 
   return (
     <main className="min-h-screen bg-[#111111] text-white py-16">
@@ -66,7 +118,7 @@ export default async function Home() {
 
         {/* Members Section */}
         <div className="mt-16">
-          <h2 className="text-xl font-light font-mono mb-8 text-center">Active Members</h2>
+          <h2 className="text-xl font-light font-mono mb-8 text-center">Approved Members</h2>
           {members.length > 0 ? (
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
               {members.map((member) => (
@@ -107,17 +159,10 @@ export default async function Home() {
             </div>
           ) : (
             <div className="text-center text-gray-400">
-              <p>No active members found.</p>
-              <p className="mt-2 text-sm">Be the first to join!</p>
+              <p>No approved members found.</p>
+              <p className="mt-2 text-sm">Contact an administrator to get approved.</p>
             </div>
           )}
-        </div>
-
-        {/* Mockup for member profile pictures */}
-        <div className="grid grid-cols-3 gap-4 mt-4">
-          <div className="w-12 h-12 bg-gray-600 rounded-full"></div>
-          <div className="w-12 h-12 bg-gray-600 rounded-full"></div>
-          <div className="w-12 h-12 bg-gray-600 rounded-full"></div>
         </div>
       </div>
     </main>

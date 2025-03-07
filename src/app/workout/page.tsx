@@ -242,17 +242,18 @@ export default function WorkoutPage() {
         throw new Error('Invalid volume calculation received')
       }
 
-      setVolumeResult(Math.round(totalVolume))
+      const roundedVolume = Math.round(totalVolume)
+      setVolumeResult(roundedVolume)
+      
+      // Update the state with the calculated volume
+      setTotalVolume(roundedVolume.toString())
       
       if (data.equation) {
         setVolumeEquation(data.equation)
       }
       
-      // Set the volume input value
-      const volumeInput = formRef.current?.querySelector('input[name="totalVolume"]') as HTMLInputElement
-      if (volumeInput) {
-        volumeInput.value = Math.round(totalVolume).toString()
-      }
+      // No need to manually set the input value since we're updating the state
+      // and the input is controlled by the state via the value={totalVolume} prop
     } catch (error: unknown) {
       setInputError(error instanceof Error ? error.message : 'Failed to calculate total volume')
       console.error('Error calculating volume:', error instanceof Error ? error.message : error)
@@ -550,16 +551,16 @@ export default function WorkoutPage() {
             exercises.map((exercise: Exercise) => (
               <div
                 key={exercise.id}
-                className="bg-[#111111] p-4 rounded-lg border border-gray-800"
+                className="bg-[#111111] p-4 rounded-lg border border-gray-800 overflow-hidden"
               >
                 <div className="flex justify-between items-start mb-2">
-                  <div>
-                    <h3 className="font-medium text-white/90">{exercise.exercise_name}</h3>
-                    <p className="text-xs text-white/50 mt-0.5">
+                  <div className="flex-1 min-w-0 mr-2">
+                    <h3 className="font-medium text-white/90 truncate">{exercise.exercise_name}</h3>
+                    <p className="text-xs text-white/50 mt-0.5 truncate">
                       {exercise.is_freeweight ? 'Free weight' : exercise.brand_name}
                     </p>
                   </div>
-                  <div className="flex flex-col items-end">
+                  <div className="flex flex-col items-end flex-shrink-0">
                     <span className="text-sm text-white/30">
                       {new Date(exercise.created_at).toLocaleTimeString([], { 
                         hour: '2-digit', 
@@ -572,20 +573,20 @@ export default function WorkoutPage() {
                   </div>
                 </div>
                 
-                <div className="bg-[#1a1a1a] p-2 rounded-md mt-2">
-                  <pre className="text-sm text-white/70 whitespace-pre-wrap font-mono">
+                <div className="bg-[#1a1a1a] p-2 rounded-md mt-2 overflow-x-auto">
+                  <pre className="text-sm text-white/70 whitespace-pre-wrap font-mono break-words">
                     {exercise.content}
                   </pre>
                 </div>
                 
                 <div className="flex justify-between mt-2 items-center">
                   {exercise.total_volume && (
-                    <span className="text-xs text-[#9ACD32]">Total volume: {exercise.total_volume}kg</span>
+                    <span className="text-xs text-[#9ACD32] truncate">Total volume: {exercise.total_volume}kg</span>
                   )}
                   <button
                     onClick={() => handleDeleteExercise(exercise.id)}
                     disabled={deletingExercise === exercise.id}
-                    className={`p-1.5 rounded-full hover:bg-[#2a2a2a] transition-colors ${deletingExercise === exercise.id ? 'opacity-50 cursor-not-allowed' : ''}`}
+                    className={`p-1.5 rounded-full hover:bg-[#2a2a2a] transition-colors flex-shrink-0 ${deletingExercise === exercise.id ? 'opacity-50 cursor-not-allowed' : ''}`}
                     aria-label="Delete exercise"
                   >
                     <TrashIcon className="w-4 h-4 text-[#D8110A]" />
