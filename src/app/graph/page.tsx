@@ -3,6 +3,7 @@
 import { useEffect, useState, useRef, useCallback } from 'react'
 import Header from '@/components/Header'
 import { useAuth } from '@/contexts/AuthContext'
+import { useViewedUser } from '@/contexts/ViewedUserContext'
 import { useRouter } from 'next/navigation'
 import {
   Chart as ChartJS,
@@ -76,6 +77,7 @@ const formatDateForDB = (date: Date) => {
 
 export default function GraphPage() {
   const { user } = useAuth()
+  const { viewedUser, isViewingSelf } = useViewedUser()
   const router = useRouter()
   const [metrics, setMetrics] = useState<Metric[]>([])
   const [goals, setGoals] = useState<Goal>({ skeletal_muscle_mass: 0, percent_body_fat: 0 })
@@ -93,11 +95,12 @@ export default function GraphPage() {
   const fetchProteinData = useCallback(async (weekDate: Date) => {
     try {
       const { monday, sunday } = getWeekDates(weekDate);
+      const userId = viewedUser?.id || user?.id || '';
       
       const { data: mealData, error: mealError } = await supabase
         .from('meal')
         .select('*')
-        .eq('UID', user?.id || '')
+        .eq('UID', userId)
         .gte('recognition_date', formatDateForDB(monday))
         .lte('recognition_date', formatDateForDB(sunday))
         .order('recognition_date', { ascending: true });
@@ -131,14 +134,15 @@ export default function GraphPage() {
       console.error('Error fetching protein data:', err);
       setError(err instanceof Error ? err.message : 'Failed to fetch protein data');
     }
-  }, [user, supabase]);
+  }, [user, supabase, viewedUser]);
 
   const fetchVolumeData = useCallback(async (weekDate: Date) => {
     try {
       const { monday, sunday } = getWeekDates(weekDate);
+      const userId = viewedUser?.id || user?.id || '';
       
       const response = await fetch(
-        `/api/workout-volume?userId=${user?.id || ''}&startDate=${formatDateForDB(monday)}&endDate=${formatDateForDB(sunday)}`
+        `/api/workout-volume?userId=${userId}&startDate=${formatDateForDB(monday)}&endDate=${formatDateForDB(sunday)}`
       );
       
       if (!response.ok) {
@@ -151,14 +155,16 @@ export default function GraphPage() {
       console.error('Error fetching workout volume data:', err);
       setError(err instanceof Error ? err.message : 'Failed to fetch workout volume data');
     }
-  }, [user]);
+  }, [user, viewedUser]);
 
   const fetchMetrics = useCallback(async () => {
     try {
+      const userId = viewedUser?.id || user?.id || '';
+      
       const { data: metricsData, error: metricsError } = await supabase
         .from('metric')
         .select('*')
-        .eq('UID', user?.id || '')
+        .eq('UID', userId)
         .order('created_at', { ascending: true });
 
       if (metricsError) throw metricsError;
@@ -173,15 +179,17 @@ export default function GraphPage() {
       console.error('Error fetching metrics:', err);
       setError(err instanceof Error ? err.message : 'Failed to fetch metrics');
     }
-  }, [user, supabase]);
+  }, [user, supabase, viewedUser]);
 
   const fetchGoal = useCallback(async () => {
     try {
+      const userId = viewedUser?.id || user?.id || '';
+      
       // Fetch latest goal
       const { data: goalData, error: goalError } = await supabase
         .from('goal')
         .select('skeletal_muscle_mass, percent_body_fat')
-        .eq('UID', user?.id || '')
+        .eq('UID', userId)
         .order('created_at', { ascending: false })
         .limit(1);
 
@@ -195,7 +203,7 @@ export default function GraphPage() {
       const { data: weightData } = await supabase
         .from('metric')
         .select('weight')
-        .eq('UID', user?.id || '')
+        .eq('UID', userId)
         .order('created_at', { ascending: false })
         .limit(1);
 
@@ -206,7 +214,7 @@ export default function GraphPage() {
       console.error('Error fetching goal:', err);
       setError(err instanceof Error ? err.message : 'Failed to fetch goal');
     }
-  }, [user, supabase]);
+  }, [user, supabase, viewedUser]);
 
   useEffect(() => {
     async function fetchData() {
@@ -245,6 +253,12 @@ export default function GraphPage() {
   const handleAddMetric = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault()
     setInputError(null)
+
+    // Only allow adding metrics if viewing own data
+    if (!isViewingSelf) {
+      setInputError("You can only add metrics to your own data")
+      return
+    }
 
     if (!user) {
       setInputError('You must be logged in to add metrics')
@@ -323,7 +337,18 @@ export default function GraphPage() {
 
   return (
     <div className="min-h-screen bg-black text-white flex flex-col">
-      <Header onAddClick={() => dialogRef.current?.showModal()} />
+      <Header onAddClick={() => isViewingSelf && dialogRef.current?.showModal()} />
+      
+      {/* Viewing Indicator */}
+      {!isViewingSelf && viewedUser && (
+        <div className="bg-[#2a2a2a] py-2 px-4 text-center">
+          <p className="text-sm text-white/70">
+            Viewing <span className="text-white font-medium">{viewedUser.display_name || 'User'}&apos;s</span> fitness data. 
+            <span className="text-xs text-[#D8110A] ml-2">(Read-only)</span>
+          </p>
+        </div>
+      )}
+      
       <div className="p-4 gap-4">
         <BodyCompositionChart metrics={metrics} goals={goals} />
         <div className="mt-8 bg-[#111111] rounded-lg shadow-2xl border border-gray-800">
@@ -416,71 +441,80 @@ export default function GraphPage() {
           <p className="text-sm text-[#D9D9D9]/50 mb-4">
              {new Date().toLocaleDateString()}
           </p>
-          <form ref={formRef} onSubmit={handleAddMetric} className="p-6 min-w-[400px]">
-            <div className="space-y-4">
-              <div>
-                <label htmlFor="weight" className="block text-sm font-medium text-[#D9D9D9] mb-1">
-                  Weight (kg)
-                </label>
-                <input
-                  type="number"
-                  step="0.1"
-                  id="weight"
-                  name="weight"
-                  className="w-full px-3 py-2 bg-[#1a1a1a] border border-gray-800 rounded-md text-white focus:outline-none focus:ring-2 focus:ring-[#D8110A]"
-                  placeholder="Enter weight"
-                />
-              </div>
-              <div>
-                <label htmlFor="muscleMass" className="block text-sm font-medium text-[#D9D9D9] mb-1">
-                  Skeletal Muscle Mass (kg)
-                </label>
-                <input
-                  type="number"
-                  step="0.1"
-                  id="muscleMass"
-                  name="muscleMass"
-                  className="w-full px-3 py-2 bg-[#1a1a1a] border border-gray-800 rounded-md text-white focus:outline-none focus:ring-2 focus:ring-[#D8110A]"
-                  placeholder="Enter muscle mass"
-                />
-              </div>
-              <div>
-                <label htmlFor="bodyFat" className="block text-sm font-medium text-[#D9D9D9] mb-1">
-                  Body Fat (%)
-                </label>
-                <input
-                  type="number"
-                  step="0.1"
-                  id="bodyFat"
-                  name="bodyFat"
-                  className="w-full px-3 py-2 bg-[#1a1a1a] border border-gray-800 rounded-md text-white focus:outline-none focus:ring-2 focus:ring-[#D8110A]"
-                  placeholder="Enter body fat percentage"
-                />
-              </div>
-            </div>
-            {inputError && (
-              <p className="text-[#D8110A] text-sm mt-2">{inputError}</p>
-            )}
-            <div className="flex justify-end gap-2 mt-6">
+          
+          {!isViewingSelf ? (
+            <div className="text-center py-4">
+              <p className="text-white/70 mb-4">You can only add measurements to your own data.</p>
               <button
-                type="button"
-                onClick={() => {
-                  dialogRef.current?.close()
-                  setInputError(null)
-                  formRef.current?.reset()
-                }}
-                className="px-4 py-2 text-[#D9D9D9] hover:bg-[#1a1a1a] rounded-md transition-colors"
-              >
-                Cancel
-              </button>
-              <button
-                type="submit"
+                onClick={() => dialogRef.current?.close()}
                 className="px-4 py-2 bg-[#D8110A] text-white rounded-md hover:bg-opacity-90 transition-colors"
               >
-                Submit
+                Close
               </button>
             </div>
-          </form>
+          ) : (
+            <form ref={formRef} onSubmit={handleAddMetric} className="min-w-[400px]">
+              <div className="space-y-4">
+                <div>
+                  <label htmlFor="weight" className="block text-sm font-medium text-[#D9D9D9] mb-1">
+                    Weight (kg)
+                  </label>
+                  <input
+                    type="number"
+                    step="0.1"
+                    id="weight"
+                    name="weight"
+                    className="w-full px-3 py-2 bg-[#1a1a1a] border border-gray-800 rounded-md text-white focus:outline-none focus:ring-2 focus:ring-[#D8110A]"
+                    placeholder="Enter weight"
+                  />
+                </div>
+                <div>
+                  <label htmlFor="muscleMass" className="block text-sm font-medium text-[#D9D9D9] mb-1">
+                    Skeletal Muscle Mass (kg)
+                  </label>
+                  <input
+                    type="number"
+                    step="0.1"
+                    id="muscleMass"
+                    name="muscleMass"
+                    className="w-full px-3 py-2 bg-[#1a1a1a] border border-gray-800 rounded-md text-white focus:outline-none focus:ring-2 focus:ring-[#D8110A]"
+                    placeholder="Enter muscle mass"
+                  />
+                </div>
+                <div>
+                  <label htmlFor="bodyFat" className="block text-sm font-medium text-[#D9D9D9] mb-1">
+                    Body Fat (%)
+                  </label>
+                  <input
+                    type="number"
+                    step="0.1"
+                    id="bodyFat"
+                    name="bodyFat"
+                    className="w-full px-3 py-2 bg-[#1a1a1a] border border-gray-800 rounded-md text-white focus:outline-none focus:ring-2 focus:ring-[#D8110A]"
+                    placeholder="Enter body fat percentage"
+                  />
+                </div>
+              </div>
+              {inputError && (
+                <p className="text-[#D8110A] text-sm mt-2">{inputError}</p>
+              )}
+              <div className="mt-6 flex justify-end space-x-3">
+                <button
+                  type="button"
+                  onClick={() => dialogRef.current?.close()}
+                  className="px-4 py-2 bg-[#1a1a1a] text-white rounded-md hover:bg-[#2a2a2a] transition-colors"
+                >
+                  Cancel
+                </button>
+                <button
+                  type="submit"
+                  className="px-4 py-2 bg-[#D8110A] text-white rounded-md hover:bg-opacity-90 transition-colors"
+                >
+                  Add Data
+                </button>
+              </div>
+            </form>
+          )}
         </div>
       </dialog>
     </div>

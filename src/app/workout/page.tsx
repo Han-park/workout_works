@@ -5,6 +5,7 @@ import { supabase } from '@/lib/supabase'
 import Header from '@/components/Header'
 import { ChevronLeftIcon, ChevronRightIcon, PlusIcon, MagicWandIcon, TrashIcon } from '@radix-ui/react-icons'
 import { useAuth } from '@/contexts/AuthContext'
+import { useViewedUser } from '@/contexts/ViewedUserContext'
 import { useRouter } from 'next/navigation'
 
 interface Exercise {
@@ -22,6 +23,7 @@ interface Exercise {
 
 export default function WorkoutPage() {
   const { user } = useAuth()
+  const { viewedUser, isViewingSelf } = useViewedUser()
   const router = useRouter()
   const [selectedDate, setSelectedDate] = useState(new Date())
   const [exercises, setExercises] = useState<Exercise[]>([])
@@ -56,13 +58,14 @@ export default function WorkoutPage() {
         setLoading(true)
         // Format the date to YYYY-MM-DD for comparison
         const selectedDateStr = new Date(selectedDate).toISOString().split('T')[0]
+        const userId = viewedUser?.id || user?.id || '';
         
-        // Fetch exercises for the current user and selected date
+        // Fetch exercises for the viewed user and selected date
         // We'll compare the date part of created_at with the selected date
         const { data: exerciseData, error: exerciseError } = await supabase
           .from('exercise')
           .select('*')
-          .eq('UID', user?.id || '')
+          .eq('UID', userId)
           .filter('created_at', 'gte', `${selectedDateStr}T00:00:00`)
           .filter('created_at', 'lte', `${selectedDateStr}T23:59:59.999999`)
           .order('created_at', { ascending: false })
@@ -77,7 +80,7 @@ export default function WorkoutPage() {
     }
 
     fetchData()
-  }, [selectedDate, user, router])
+  }, [selectedDate, user, router, viewedUser])
 
   const handleDateChange = (days: number) => {
     const newDate = new Date(selectedDate)
@@ -266,8 +269,14 @@ export default function WorkoutPage() {
     e.preventDefault()
     setInputError(null)
 
+    // Only allow adding exercises if viewing own data
+    if (!isViewingSelf) {
+      setInputError("You can only add exercises to your own data")
+      return
+    }
+
     if (!user) {
-      setInputError('You must be logged in to add an exercise')
+      setInputError('You must be logged in to add exercises')
       return
     }
 
@@ -318,15 +327,14 @@ export default function WorkoutPage() {
     }
   }
 
-  // Group exercises by muscle group for the summary
-  const exercisesByMuscleGroup = exercises.reduce((acc: Record<string, number>, exercise) => {
-    const group = exercise.target_muscle_group || 'other'
-    acc[group] = (acc[group] || 0) + 1
-    return acc
-  }, {})
-
   // Add this new function to handle exercise deletion
   const handleDeleteExercise = async (exerciseId: number) => {
+    // Only allow deleting exercises if viewing own data
+    if (!isViewingSelf) {
+      setInputError("You can only delete exercises from your own data")
+      return;
+    }
+    
     if (!user) return
     
     try {
@@ -365,6 +373,16 @@ export default function WorkoutPage() {
     <div className="min-h-screen bg-black text-white flex flex-col">
       <Header />
       
+      {/* Viewing Indicator */}
+      {!isViewingSelf && viewedUser && (
+        <div className="bg-[#2a2a2a] py-2 px-4 text-center">
+          <p className="text-sm text-white/70">
+            Viewing <span className="text-white font-medium">{viewedUser.display_name || 'User'}&apos;s</span> workout data. 
+            <span className="text-xs text-[#D8110A] ml-2">(Read-only)</span>
+          </p>
+        </div>
+      )}
+      
       {/* Date Carousel */}
       <div className="p-4 flex items-center justify-center gap-4 bg-[#111111] border-b border-gray-800">
         <button
@@ -389,208 +407,150 @@ export default function WorkoutPage() {
       </div>
 
       <div className="flex-1 p-4 space-y-6">
-        {/* Summary */}
-        <div className="bg-[#111111] p-4 rounded-lg border border-gray-800">
-          <div className="flex justify-between items-center mb-2">
-            <h2 className="text-lg font-medium text-white/90">Workout Summary</h2>
-          </div>
-          <div className="flex gap-4">
-            <div className="flex-1 bg-[#1a1a1a] p-3 rounded-md">
-              <p className="text-sm text-white/50 mb-1">Total Exercises</p>
-              <p className="text-2xl font-medium text-[#D8110A]">{exercises.length}</p>
-            </div>
-            <div className="flex-1 bg-[#1a1a1a] p-3 rounded-md">
-              <p className="text-sm text-white/50 mb-1">Total Volume</p>
-              <p className="text-2xl font-medium text-white">
-                {exercises.reduce((sum, exercise) => sum + (exercise.total_volume || 0), 0)}kg
-              </p>
-            </div>
-          </div>
-          
-          {/* Muscle Groups Summary */}
-          {Object.keys(exercisesByMuscleGroup).length > 0 && (
-            <div className="mt-3 grid grid-cols-2 gap-2">
-              {Object.entries(exercisesByMuscleGroup).map(([group, count]) => (
-                <div key={group} className="bg-[#1a1a1a] p-2 rounded-md flex justify-between items-center">
-                  <span className="text-sm text-white/70 capitalize">{group}</span>
-                  <span className="text-sm font-medium text-white">{count}</span>
-                </div>
-              ))}
-            </div>
-          )}
-        </div>
-
-        {/* Add Exercise Form */}
-        <form ref={formRef} onSubmit={handleAddExercise} className="bg-[#111111] p-4 rounded-lg border border-gray-800">
-          <div className="flex flex-col gap-3">
-            {/* Row 1: Exercise Name and Muscle Group */}
-            <div className="flex gap-2">
-              <div className="flex-1 relative">
+        {/* Add Exercise Form - Only show if viewing own data */}
+        {isViewingSelf ? (
+          <form ref={formRef} onSubmit={handleAddExercise} className="bg-[#111111] p-4 rounded-lg border border-gray-800">
+            <div className="flex flex-col gap-3">
+              <div className="flex gap-2">
                 <input
                   type="text"
                   name="exerciseName"
-                  placeholder="Exercise name (e.g. Bench Press, Squat)"
-                  className="w-full px-3 py-2 bg-[#1a1a1a] border border-gray-800 rounded-md text-white focus:outline-none focus:ring-2 focus:ring-[#D8110A]"
-                  onChange={handleExerciseNameChange}
+                  placeholder="Exercise name"
                   value={exerciseName}
+                  onChange={handleExerciseNameChange}
+                  className="flex-1 px-3 py-2 bg-[#1a1a1a] border border-gray-800 rounded-md text-white focus:outline-none focus:ring-2 focus:ring-[#D8110A]"
                 />
-                {predictingMuscleGroup && (
-                  <div className="absolute right-3 top-1/2 -translate-y-1/2 text-xs text-white/50">
-                    Predicting...
-                  </div>
-                )}
+                <input
+                  type="text"
+                  name="brandName"
+                  placeholder="Brand (optional)"
+                  value={brandName}
+                  onChange={handleBrandNameChange}
+                  className="flex-1 px-3 py-2 bg-[#1a1a1a] border border-gray-800 rounded-md text-white focus:outline-none focus:ring-2 focus:ring-[#D8110A]"
+                />
               </div>
               
-              {predictedMuscleGroup && !predictingMuscleGroup && (
-                <div className="px-3 py-2 rounded-md text-white flex items-center gap-2">
-                  <span className="text-sm text-[#D8110A] capitalize">{predictedMuscleGroup}</span>
-                  <input type="hidden" name="targetMuscleGroup" value={predictedMuscleGroup} />
-                </div>
-              )}
-              {!predictedMuscleGroup && !predictingMuscleGroup && (
-                <div className="px-3 py-2  rounded-md text-white/50 text-sm">
-                  ---
-                </div>
-              )}
-            </div>
-            
-            {/* Row 2: Brand Name and Free Weight Checkbox */}
-            <div className="flex gap-2 items-center">
-              <input
-                type="text"
-                name="brandName"
-                placeholder="Brand name (optional)"
-                disabled={isFreeweight}
-                className={`flex-1 px-3 py-2 bg-[#1a1a1a] border border-gray-800 rounded-md text-white focus:outline-none focus:ring-2 focus:ring-[#D8110A] ${isFreeweight ? 'opacity-50 cursor-not-allowed' : ''}`}
-                onChange={handleBrandNameChange}
-                value={brandName}
+              <div className="flex items-center gap-2">
+                <label className="flex items-center gap-2 text-white/70">
+                  <input
+                    type="checkbox"
+                    name="isFreeweight"
+                    checked={isFreeweight}
+                    onChange={handleFreeweightChange}
+                    className="w-4 h-4 bg-[#1a1a1a] border border-gray-800 rounded focus:ring-[#D8110A] focus:ring-2"
+                  />
+                  Free Weight
+                </label>
+                
+                {predictingMuscleGroup ? (
+                  <span className="text-sm text-white/50">Predicting muscle group...</span>
+                ) : predictedMuscleGroup ? (
+                  <span className="text-sm text-[#D8110A]">Muscle group: {predictedMuscleGroup}</span>
+                ) : null}
+              </div>
+              
+              <textarea
+                name="content"
+                placeholder="Exercise details (e.g., 20kg × 3 × 12)"
+                value={content}
+                onChange={handleContentChange}
+                rows={4}
+                className="w-full px-3 py-2 bg-[#1a1a1a] border border-gray-800 rounded-md text-white focus:outline-none focus:ring-2 focus:ring-[#D8110A] font-mono"
               />
               
-              <label className="w-1/3 text-white/70 text-sm flex items-center gap-2 px-3 py-2 bg-[#1a1a1a] border border-gray-800 rounded-md">
+              <div className="flex gap-2 items-center">
                 <input
-                  type="checkbox"
-                  name="isFreeweight"
-                  checked={isFreeweight}
-                  onChange={handleFreeweightChange}
-                  value="true"
-                  className="rounded bg-[#1a1a1a] border-gray-800 text-[#D8110A] focus:ring-[#D8110A]"
+                  type="text"
+                  name="totalVolume"
+                  placeholder="Total volume (kg)"
+                  value={totalVolume}
+                  onChange={handleTotalVolumeChange}
+                  className="flex-1 px-3 py-2 bg-[#1a1a1a] border border-gray-800 rounded-md text-white focus:outline-none focus:ring-2 focus:ring-[#D8110A]"
                 />
-                Free weight
-              </label>
-            </div>
-            
-            {/* Row 3: Exercise Details */}
-            <textarea
-              name="content"
-              placeholder="Exercise details (e.g. '- 20k: 12, 10, 8 reps' or '22k each: 12, 12, 15')"
-              rows={5}
-              value={content}
-              onChange={handleContentChange}
-              className="w-full px-3 py-2 bg-[#1a1a1a] border border-gray-800 rounded-md text-white focus:outline-none focus:ring-2 focus:ring-[#D8110A]"
-            ></textarea>
-            
-            {/* Row 4: Total Volume and Magic Wand */}
-            <div className="flex gap-2">
-              <input
-                type="number"
-                name="totalVolume"
-                placeholder="Total volume (kg)"
-                min="0"
-                className="flex-1 px-3 py-2 bg-[#1a1a1a] border border-gray-800 rounded-md text-white focus:outline-none focus:ring-2 focus:ring-[#D8110A] [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
-                onChange={handleTotalVolumeChange}
-                value={totalVolume}
-              />
+                <button
+                  type="button"
+                  onClick={calculateVolume}
+                  disabled={!content || calculatingVolume}
+                  className="pl-3 pr-4 py-2 bg-[#D8110A] border border-gray-800 rounded-md text-white disabled:opacity-50 disabled:cursor-not-allowed hover:bg-[#2a2a2a] transition-colors"
+                >
+                  <MagicWandIcon className="w-5 h-5" />
+                </button>
+              </div>
+              
+              {calculatingVolume && (
+                <div className="text-sm text-white/50 text-center">
+                  Calculating volume...
+                </div>
+              )}
+              
+              {volumeResult !== null && !calculatingVolume && (
+                <div className="text-sm text-[#D8110A] text-center">
+                  Calculated volume: {volumeResult}kg
+                </div>
+              )}
+              
+              {volumeEquation && (
+                <div className="text-xs text-white/50 bg-[#1a1a1a] p-2 rounded-md font-mono whitespace-pre-wrap">
+                  {volumeEquation}
+                </div>
+              )}
+              
               <button
-                type="button"
-                onClick={calculateVolume}
-                disabled={!content || calculatingVolume}
-                className="px-4 py-2 bg-[#D8110A] border border-gray-800 rounded-md text-white disabled:opacity-50 disabled:cursor-not-allowed hover:bg-[#2a2a2a] transition-colors"
+                type="submit"
+                className="w-full py-2 bg-[#D8110A] text-white rounded-md hover:bg-opacity-90 transition-colors flex items-center justify-center gap-2"
               >
-                <MagicWandIcon className="w-5 h-5" />
+                <PlusIcon className="w-5 h-5" />
+                <span>Add Exercise</span>
               </button>
             </div>
             
-            {calculatingVolume && (
-              <div className="text-sm text-white/50 text-center">
-                Calculating total volume...
-              </div>
+            {inputError && (
+              <p className="text-[#D8110A] text-sm mt-2">{inputError}</p>
             )}
-            {volumeResult !== null && !calculatingVolume && (
-              <div className="space-y-1">
-                <div className="text-sm text-[#D8110A] text-center">
-                  Calculated total volume: {volumeResult}kg
-                </div>
-                {volumeEquation && (
-                  <div className="text-xs text-white/50 bg-[#1a1a1a] p-2 rounded-md overflow-auto max-h-24 whitespace-pre-wrap">
-                    <code>{volumeEquation}</code>
-                  </div>
-                )}
-              </div>
-            )}
-            
-            <button
-              type="submit"
-              className="w-full py-2 bg-[#D8110A] text-white rounded-md hover:bg-opacity-90 transition-colors flex items-center justify-center gap-2"
-            >
-              <PlusIcon className="w-5 h-5" />
-              <span>Add Exercise</span>
-            </button>
+          </form>
+        ) : (
+          <div className="bg-[#111111] p-4 rounded-lg border border-gray-800 text-center">
+            <p className="text-white/50">You can only add exercises to your own data.</p>
           </div>
-          {inputError && (
-            <p className="text-[#D8110A] text-sm mt-2">{inputError}</p>
-          )}
-        </form>
+        )}
 
         {/* Exercise List */}
         <div className="space-y-2">
           {exercises.length === 0 ? (
-            <div className="bg-[#111111] p-4 rounded-lg border border-gray-800 text-center">
-              <p className="text-white/50">No exercises recorded for this day</p>
+            <div className="text-center py-8 text-white/50">
+              No exercises recorded for this day.
             </div>
           ) : (
-            exercises.map((exercise: Exercise) => (
+            exercises.map((exercise) => (
               <div
                 key={exercise.id}
-                className="bg-[#111111] p-4 rounded-lg border border-gray-800 overflow-hidden"
+                className="bg-[#111111] p-4 rounded-lg border border-gray-800"
               >
-                <div className="flex justify-between items-start mb-2">
-                  <div className="flex-1 min-w-0 mr-2">
-                    <h3 className="font-medium text-white/90 truncate">{exercise.exercise_name}</h3>
-                    <p className="text-xs text-white/50 mt-0.5 truncate">
-                      {exercise.is_freeweight ? 'Free weight' : exercise.brand_name}
+                <div className="flex justify-between items-start">
+                  <div className="flex-1">
+                    <h3 className="font-medium text-white/90">{exercise.exercise_name}</h3>
+                    <p className="text-sm text-white/50">
+                      {exercise.brand_name && `${exercise.brand_name} • `}
+                      {exercise.is_freeweight ? 'Free Weight' : 'Machine'} • 
+                      {exercise.target_muscle_group && ` ${exercise.target_muscle_group} • `}
+                      {exercise.total_volume}kg
                     </p>
+                    <pre className="mt-2 text-sm text-white/70 font-mono whitespace-pre-wrap overflow-auto max-h-40">
+                      {exercise.content}
+                    </pre>
                   </div>
-                  <div className="flex flex-col items-end flex-shrink-0">
-                    <span className="text-sm text-white/30">
-                      {new Date(exercise.created_at).toLocaleTimeString([], { 
-                        hour: '2-digit', 
-                        minute: '2-digit' 
-                      })}
-                    </span>
-                    <span className="text-xs text-[#D8110A] mt-0.5 capitalize">
-                      {exercise.target_muscle_group}
-                    </span>
-                  </div>
-                </div>
-                
-                <div className="bg-[#1a1a1a] p-2 rounded-md mt-2 overflow-x-auto">
-                  <pre className="text-sm text-white/70 whitespace-pre-wrap font-mono break-words">
-                    {exercise.content}
-                  </pre>
-                </div>
-                
-                <div className="flex justify-between mt-2 items-center">
-                  {exercise.total_volume && (
-                    <span className="text-xs text-[#9ACD32] truncate">Total volume: {exercise.total_volume}kg</span>
+                  
+                  {/* Only show delete button if viewing own data */}
+                  {isViewingSelf && (
+                    <button
+                      onClick={() => handleDeleteExercise(exercise.id)}
+                      disabled={deletingExercise === exercise.id}
+                      className={`p-1.5 rounded-full hover:bg-[#2a2a2a] transition-colors flex-shrink-0 ${deletingExercise === exercise.id ? 'opacity-50 cursor-not-allowed' : ''}`}
+                      aria-label="Delete exercise"
+                    >
+                      <TrashIcon className="w-4 h-4 text-[#D8110A]" />
+                    </button>
                   )}
-                  <button
-                    onClick={() => handleDeleteExercise(exercise.id)}
-                    disabled={deletingExercise === exercise.id}
-                    className={`p-1.5 rounded-full hover:bg-[#2a2a2a] transition-colors flex-shrink-0 ${deletingExercise === exercise.id ? 'opacity-50 cursor-not-allowed' : ''}`}
-                    aria-label="Delete exercise"
-                  >
-                    <TrashIcon className="w-4 h-4 text-[#D8110A]" />
-                  </button>
                 </div>
               </div>
             ))

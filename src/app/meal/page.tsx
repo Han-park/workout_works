@@ -6,6 +6,7 @@ import Header from '@/components/Header'
 import { ChevronLeftIcon, ChevronRightIcon, PlusIcon, MagicWandIcon, InfoCircledIcon } from '@radix-ui/react-icons'
 import * as Tooltip from '@radix-ui/react-tooltip'
 import { useAuth } from '@/contexts/AuthContext'
+import { useViewedUser } from '@/contexts/ViewedUserContext'
 import { useRouter } from 'next/navigation'
 
 interface Food {
@@ -21,6 +22,7 @@ interface Food {
 
 export default function MealPage() {
   const { user } = useAuth()
+  const { viewedUser, isViewingSelf } = useViewedUser()
   const router = useRouter()
   const [selectedDate, setSelectedDate] = useState(new Date())
   const [foods, setFoods] = useState<Food[]>([])
@@ -43,11 +45,14 @@ export default function MealPage() {
     async function fetchData() {
       try {
         setLoading(true)
-        // Fetch latest weight for the current user
+        // Use viewedUser.id instead of user.id for fetching data
+        const userId = viewedUser?.id || user?.id || ''
+        
+        // Fetch latest weight for the viewed user
         const { data: weightData, error: weightError } = await supabase
           .from('metric')
           .select('weight')
-          .eq('UID', user?.id || '')
+          .eq('UID', userId)
           .order('created_at', { ascending: false })
           .limit(1)
 
@@ -57,12 +62,12 @@ export default function MealPage() {
           setLatestWeight(weightData[0].weight)
         }
 
-        // Fetch foods for the current user
+        // Fetch foods for the viewed user
         const selectedDateStr = new Date(selectedDate).toISOString().split('T')[0]
         const { data: foodData, error: foodError } = await supabase
           .from('meal')
           .select('*')
-          .eq('UID', user?.id || '')
+          .eq('UID', userId)
           .eq('recognition_date', selectedDateStr)
           .order('created_at', { ascending: false })
 
@@ -76,7 +81,7 @@ export default function MealPage() {
     }
 
     fetchData()
-  }, [selectedDate, user, router])
+  }, [selectedDate, user, router, viewedUser])
   
   // Derived values
   const totalProtein = foods.reduce((sum: number, food: Food) => sum + food.protein_content, 0)
@@ -104,6 +109,12 @@ export default function MealPage() {
   const handleAddFood = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault()
     setInputError(null)
+
+    // Only allow adding food if viewing own data
+    if (!isViewingSelf) {
+      setInputError("You can only add food to your own data")
+      return
+    }
 
     if (!user) {
       setInputError('You must be logged in to add food')
@@ -218,6 +229,16 @@ export default function MealPage() {
     <div className="min-h-screen bg-black text-white flex flex-col">
       <Header />
       
+      {/* Viewing Indicator */}
+      {!isViewingSelf && viewedUser && (
+        <div className="bg-[#2a2a2a] py-2 px-4 text-center">
+          <p className="text-sm text-white/70">
+            Viewing <span className="text-white font-medium">{viewedUser.display_name || 'User'}&apos;s</span> meal data. 
+            <span className="text-xs text-[#D8110A] ml-2">(Read-only)</span>
+          </p>
+        </div>
+      )}
+      
       {/* Date Carousel */}
       <div className="p-4 flex items-center justify-center gap-4 bg-[#111111] border-b border-gray-800">
         <button
@@ -277,7 +298,7 @@ export default function MealPage() {
           <div className="flex gap-4">
             <div className="flex-1 bg-[#1a1a1a] p-3 rounded-md">
               <p className="text-sm text-white/50 mb-1">Total Protein</p>
-              <p className="text-2xl font-medium text-[#D8110A]">{totalProtein}g</p>
+              <p className={`text-2xl font-medium ${totalProtein >= proteinGoal ? 'text-green-500' : 'text-[#D8110A]'}`}>{totalProtein}g</p>
             </div>
             <div className="flex-1 bg-[#1a1a1a] p-3 rounded-md">
               <p className="text-sm text-white/50 mb-1">Creatine</p>
@@ -306,77 +327,83 @@ export default function MealPage() {
 
           </div>
 
-        {/* Add Food Form */}
-        <form ref={formRef} onSubmit={handleAddFood} className="bg-[#111111] p-4 rounded-lg border border-gray-800">
-          <div className="flex flex-col gap-3">
-            <input
-              type="text"
-              name="foodName"
-              placeholder="Food name (or type 'creatine')"
-              onChange={handleFoodNameChange}
-              className="w-full px-3 py-2 bg-[#1a1a1a] border border-gray-800 rounded-md text-white focus:outline-none focus:ring-2 focus:ring-[#D8110A]"
-            />
-            <div className="flex gap-2 items-center">
+        {/* Add Food Form - Only show if viewing own data */}
+        {isViewingSelf ? (
+          <form ref={formRef} onSubmit={handleAddFood} className="bg-[#111111] p-4 rounded-lg border border-gray-800">
+            <div className="flex flex-col gap-3">
+              <input
+                type="text"
+                name="foodName"
+                placeholder="Food name (or type 'creatine')"
+                onChange={handleFoodNameChange}
+                className="w-full px-3 py-2 bg-[#1a1a1a] border border-gray-800 rounded-md text-white focus:outline-none focus:ring-2 focus:ring-[#D8110A]"
+              />
+              <div className="flex gap-2 items-center">
+                {isCreatine ? (
+                  <div className="w-full px-3 py-2 bg-[#1a1a1a] border border-gray-800 rounded-md text-white/50">
+                    5g
+                  </div>
+                ) : (
+                  <>
+                    <input
+                      type="number"
+                      name="weight"
+                      placeholder="Total (g)"
+                      step="0.1"
+                      onChange={handleWeightChange}
+                      className="flex-1 px-3 py-2 bg-[#1a1a1a] border border-gray-800 rounded-md text-white focus:outline-none focus:ring-2 focus:ring-[#D8110A] [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
+                    />
+                    <button
+                      type="button"
+                      onClick={calculateProtein}
+                      disabled={!foodName || !weight || calculatingProtein}
+                      className="pl-3 pr-4 py-2 bg-[#D8110A] border border-gray-800 rounded-md text-white disabled:opacity-50 disabled:cursor-not-allowed hover:bg-[#2a2a2a] transition-colors"
+                    >
+                      <MagicWandIcon className="w-5 h-5" />
+                    </button>
+                  </>
+                )}
+              </div>
+              {calculatingProtein && (
+                <div className="text-sm text-white/50 text-center">
+                  Calculating protein content...
+                </div>
+              )}
+              {proteinResult !== null && !calculatingProtein && (
+                <div className="text-sm text-[#D8110A] text-center">
+                  Estimated protein content: {proteinResult}g
+                </div>
+              )}
               {isCreatine ? (
                 <div className="w-full px-3 py-2 bg-[#1a1a1a] border border-gray-800 rounded-md text-white/50">
-                  5g
+                  0g
                 </div>
               ) : (
-                <>
-                  <input
-                    type="number"
-                    name="weight"
-                    placeholder="Total (g)"
-                    step="0.1"
-                    onChange={handleWeightChange}
-                    className="flex-1 px-3 py-2 bg-[#1a1a1a] border border-gray-800 rounded-md text-white focus:outline-none focus:ring-2 focus:ring-[#D8110A] [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
-                  />
-                  <button
-                    type="button"
-                    onClick={calculateProtein}
-                    disabled={!foodName || !weight || calculatingProtein}
-                    className="pl-3 pr-4 py-2 bg-[#D8110A] border border-gray-800 rounded-md text-white disabled:opacity-50 disabled:cursor-not-allowed hover:bg-[#2a2a2a] transition-colors"
-                  >
-                    <MagicWandIcon className="w-5 h-5" />
-                  </button>
-                </>
+                <input
+                  type="number"
+                  name="proteinContent"
+                  placeholder="Protein (g)"
+                  step="0.1"
+                  className="w-full px-3 py-2 bg-[#1a1a1a] border border-gray-800 rounded-md text-white focus:outline-none focus:ring-2 focus:ring-[#D8110A] [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
+                />
               )}
+              <button
+                type="submit"
+                className="w-full py-2 bg-[#D8110A] text-white rounded-md hover:bg-opacity-90 transition-colors flex items-center justify-center gap-2"
+              >
+                <PlusIcon className="w-5 h-5" />
+                <span>Add Food</span>
+              </button>
             </div>
-            {calculatingProtein && (
-              <div className="text-sm text-white/50 text-center">
-                Calculating protein content...
-              </div>
+            {inputError && (
+              <p className="text-[#D8110A] text-sm mt-2">{inputError}</p>
             )}
-            {proteinResult !== null && !calculatingProtein && (
-              <div className="text-sm text-[#D8110A] text-center">
-                Estimated protein content: {proteinResult}g
-              </div>
-            )}
-            {isCreatine ? (
-              <div className="w-full px-3 py-2 bg-[#1a1a1a] border border-gray-800 rounded-md text-white/50">
-                0g
-              </div>
-            ) : (
-              <input
-                type="number"
-                name="proteinContent"
-                placeholder="Protein (g)"
-                step="0.1"
-                className="w-full px-3 py-2 bg-[#1a1a1a] border border-gray-800 rounded-md text-white focus:outline-none focus:ring-2 focus:ring-[#D8110A] [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
-              />
-            )}
-            <button
-              type="submit"
-              className="w-full py-2 bg-[#D8110A] text-white rounded-md hover:bg-opacity-90 transition-colors flex items-center justify-center gap-2"
-            >
-              <PlusIcon className="w-5 h-5" />
-              <span>Add Food</span>
-            </button>
+          </form>
+        ) : (
+          <div className="bg-[#111111] p-4 rounded-lg border border-gray-800 text-center">
+            <p className="text-white/50">You can only add food to your own data.</p>
           </div>
-          {inputError && (
-            <p className="text-[#D8110A] text-sm mt-2">{inputError}</p>
-          )}
-        </form>
+        )}
 
         {/* Food List */}
         <div className="space-y-2">
