@@ -130,17 +130,19 @@ export default function ApprovedMembersList({ approvedUserIds }: { approvedUserI
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6 mt-8">
           {members.map((member) => (
            <>
-              <div className="relative w-12 h-12 rounded-full overflow-hidden border border-gray-800">
-                <div className="w-full h-full bg-gray-800 flex items-center justify-center">
-                  <span className="text-gray-400 text-sm">
-                    {(member.display_name || 'User').charAt(0).toUpperCase()}
-                  </span>
+              <div key={member.id} className="flex flex-col justify-center border border-gray-400 px-3 py-2">
+                <div className="relative w-12 h-12 rounded-full overflow-hidden border border-gray-800">
+                  <div className="w-full h-full bg-gray-800 flex items-center justify-center">
+                    <span className="text-gray-400 text-sm">
+                      {(member.display_name || 'User').charAt(0).toUpperCase()}
+                    </span>
+                  </div>
                 </div>
-              </div>
-              <div className="flex-1 min-w-0">
-                <p className="text-white font-medium truncate">
-                  {member.display_name || 'Anonymous User'}
-                </p>
+                <div className="flex-1 min-w-0">
+                  <p className="text-white font-medium truncate">
+                    {member.display_name || 'Anonymous User'}
+                  </p>
+                </div>
               </div>
             </>
    
@@ -162,7 +164,7 @@ export default function ApprovedMembersList({ approvedUserIds }: { approvedUserI
   return (
     <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-8">
       {members.map((member) => (
-      <div className="flex flex-col justify-center border border-gray-400 px-3 py-2">
+        <div key={member.id} className="flex flex-col justify-center border border-gray-400 px-3 py-2">
           <div className="relative w-full h-full aspect-square overflow-hidden border border-gray-600">
             {member.avatar_url ? (
               <Image
@@ -190,7 +192,7 @@ export default function ApprovedMembersList({ approvedUserIds }: { approvedUserI
               </p>
             )}
           </div>
-     </div>
+        </div>
       ))}
     </div>
   )
