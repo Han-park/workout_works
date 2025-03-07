@@ -77,12 +77,12 @@ export default function MealPage() {
 
     fetchData()
   }, [selectedDate, user, router])
-
+  
   // Derived values
   const totalProtein = foods.reduce((sum: number, food: Food) => sum + food.protein_content, 0)
   const proteinGoal = latestWeight ? Math.round(latestWeight * 2) : 160
   const creatineTaken = foods.some((food: Food) => food.creatine)
-
+  
   const handleDateChange = (days: number) => {
     const newDate = new Date(selectedDate)
     newDate.setDate(newDate.getDate() + days)
@@ -272,6 +272,8 @@ export default function MealPage() {
               </Tooltip.Provider>
             </div>
           </div>
+        
+          
           <div className="flex gap-4">
             <div className="flex-1 bg-[#1a1a1a] p-3 rounded-md">
               <p className="text-sm text-white/50 mb-1">Total Protein</p>
@@ -284,7 +286,25 @@ export default function MealPage() {
               </p>
             </div>
           </div>
-        </div>
+    
+
+        {/* Protein Progress Bar */}
+        <div className="mt-4">
+            <div className="w-full h-3 bg-gray-800 rounded-full overflow-hidden">
+              <div 
+                className={`h-full ${totalProtein >= proteinGoal ? 'bg-green-500' : 'bg-[#D8110A]'} transition-all duration-500 ease-out`}
+                style={{ width: `${Math.min(100, (totalProtein / proteinGoal) * 100)}%` }}
+              ></div>
+            </div>
+            <div className="flex justify-between mt-1 text-xs text-white/30">
+              <span>{totalProtein}g</span>
+              <span>{Math.round((totalProtein / proteinGoal) * 100)}%</span>
+              <span>{proteinGoal}g</span>
+            </div>
+            
+          </div>
+
+          </div>
 
         {/* Add Food Form */}
         <form ref={formRef} onSubmit={handleAddFood} className="bg-[#111111] p-4 rounded-lg border border-gray-800">
