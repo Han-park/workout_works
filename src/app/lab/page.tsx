@@ -5,7 +5,6 @@ import { useRouter } from 'next/navigation'
 import Header from '@/components/Header'
 import { supabase } from '@/lib/supabase'
 import Image from 'next/image'
-import { useAuth } from '@/contexts/AuthContext'
 import dynamic from 'next/dynamic'
 import { 
   PersonIcon, 
@@ -71,7 +70,7 @@ const ModelGrid = dynamic(() => import('@/components/ModelGrid'), {
 })
 
 export default function LabPage() {
-  const { user: currentUser } = useAuth()
+  // We're not using the user anymore since we removed the authentication check
   const router = useRouter()
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
