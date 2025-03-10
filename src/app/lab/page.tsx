@@ -147,13 +147,9 @@ export default function LabPage() {
       }
     }
     
-    // Check if user is authenticated before fetching data
-    if (currentUser) {
-      fetchTargetUserData()
-    } else {
-      router.push('/auth/signin')
-    }
-  }, [router, targetUID, currentUser])
+    // Fetch data regardless of authentication status
+    fetchTargetUserData()
+  }, [router, targetUID])
 
   if (loading) {
     return (
