@@ -9,12 +9,8 @@ import dynamic from 'next/dynamic'
 import { 
   PersonIcon, 
   ClockIcon, 
-  BarChartIcon, 
   InfoCircledIcon, 
-  HomeIcon, 
   CheckCircledIcon,
-  BackpackIcon,
-  MixerVerticalIcon,
   ReloadIcon
 } from '@radix-ui/react-icons'
 
@@ -246,30 +242,29 @@ export default function LabPage() {
   return (
     <div>
       <Header />
-      <div className="p-4 max-w-lg mx-auto">
-        <h1 className="text-2xl font-bold text-white mb-6 flex items-center">
-          Member Profile
-        </h1>
+      <div className="p-4 max-w-lg pb-24 mx-auto">
         
         {/* User Profile Card */}
-        <div className="bg-[#1A1A1A] rounded-lg p-4 mb-6 border border-gray-800">
+        <div className="p-4 mb-6">
           <div className="flex items-center mb-2">
             {targetUser.avatar_url ? (
               <Image
                 src={targetUser.avatar_url}
                 alt={targetUser.display_name || 'User'}
-                width={60}
-                height={60}
+                width={80}
+                height={80}
                 className="rounded-full object-cover aspect-square"
               />
             ) : (
-              <div className="w-[60px] h-[60px] rounded-full bg-gray-800 flex items-center justify-center">
+              <div className="w-[80px] h-[80px] rounded-full bg-gray-800 flex items-center justify-center">
                 <PersonIcon className="w-8 h-8 text-gray-400" />
               </div>
             )}
-            <div className="ml-4">
-              <h2 className="text-xl font-semibold text-white">{targetUser.display_name || 'User'}</h2>
+            <div className="ml-4 flex flex-col gap-1">
+              <h2 className="text-2xl font-semibold text-white">{targetUser.display_name || 'User'}</h2>
+              <p className='text-gray-400 text-normal'>founder of CFP</p>
               <p className="text-gray-400 text-sm flex items-center">
+     
                 <ClockIcon className="w-4 h-4 mr-1" />
                 Member since {new Date(targetUser.created_at).toLocaleDateString()}
               </p>
@@ -280,7 +275,7 @@ export default function LabPage() {
         {/* Gym Membership Card */}
         <div className="bg-[#1A1A1A] rounded-lg p-4 mb-6 border border-gray-800">
           <h2 className="text-xl font-semibold text-white mb-4 flex items-center">
-            <HomeIcon className="w-5 h-5 mr-2 text-[#D8110A]" />
+          
             Gym Membership
           </h2>
           
@@ -297,7 +292,7 @@ export default function LabPage() {
         {/* Big Three Total Card */}
         <div className="bg-[#1A1A1A] rounded-lg p-4 mb-6 border border-gray-800">
           <h2 className="text-xl font-semibold text-white mb-4 flex items-center">
-            <BarChartIcon className="w-5 h-5 mr-2 text-[#D8110A]" />
+           
             Big Three Total
           </h2>
           
@@ -328,7 +323,7 @@ export default function LabPage() {
         {/* Gears Card */}
         <div className="bg-[#1A1A1A] rounded-lg p-4 mb-6 border border-gray-800">
           <h2 className="text-xl font-semibold text-white mb-4 flex items-center">
-            <BackpackIcon className="w-5 h-5 mr-2 text-[#D8110A]" />
+           
             Gears
           </h2>
           
@@ -342,16 +337,13 @@ export default function LabPage() {
             <ModelGrid models={gearModels} itemHeight={200} />
           </Suspense>
           
-          <p className="text-gray-400 text-sm mt-3 flex items-center">
-            <InfoCircledIcon className="w-4 h-4 mr-1" />
-            Essential gear for optimal performance
-          </p>
+      
         </div>
         
         {/* Nutrient Supplements Card */}
         <div className="bg-[#1A1A1A] rounded-lg p-4 mb-6 border border-gray-800">
           <h2 className="text-xl font-semibold text-white mb-4 flex items-center">
-            <MixerVerticalIcon className="w-5 h-5 mr-2 text-[#D8110A]" />
+          
             Supplements
           </h2>
           
@@ -365,10 +357,7 @@ export default function LabPage() {
             <ModelGrid models={supplementModels} itemHeight={200} />
           </Suspense>
           
-          <p className="text-gray-400 text-sm mt-3 flex items-center">
-            <InfoCircledIcon className="w-4 h-4 mr-1" />
-            Supplements to support training and recovery
-          </p>
+    
         </div>
         
         {/* Latest Measurements Card */}
