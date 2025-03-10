@@ -18,7 +18,6 @@ import {
   MixerVerticalIcon,
   ReloadIcon
 } from '@radix-ui/react-icons'
-import { GLTF } from 'three-stdlib'
 
 // Define the model item type
 type RotationConfig = {
