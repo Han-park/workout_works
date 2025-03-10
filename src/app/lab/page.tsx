@@ -8,7 +8,6 @@ import Image from 'next/image'
 import { useAuth } from '@/contexts/AuthContext'
 import dynamic from 'next/dynamic'
 import { 
-  MixerHorizontalIcon, 
   PersonIcon, 
   ClockIcon, 
   BarChartIcon, 
@@ -47,7 +46,7 @@ type ProfileData = {
   display_name?: string;
   avatar_url?: string;
   created_at: string;
-  [key: string]: any;
+  [key: string]: unknown;
 }
 
 type MeasurementData = {
@@ -56,7 +55,7 @@ type MeasurementData = {
   skeletal_muscle_mass: number;
   bmi: number;
   created_at: string;
-  [key: string]: any;
+  [key: string]: unknown;
 }
 
 // Dynamically import the ModelGrid component to avoid SSR issues
@@ -72,7 +71,7 @@ const ModelGrid = dynamic(() => import('@/components/ModelGrid'), {
 })
 
 export default function LabPage() {
-  const { user } = useAuth()
+  const { user: currentUser } = useAuth()
   const router = useRouter()
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
@@ -148,8 +147,13 @@ export default function LabPage() {
       }
     }
     
-    fetchTargetUserData()
-  }, [router, targetUID])
+    // Check if user is authenticated before fetching data
+    if (currentUser) {
+      fetchTargetUserData()
+    } else {
+      router.push('/auth/signin')
+    }
+  }, [router, targetUID, currentUser])
 
   if (loading) {
     return (
@@ -199,15 +203,15 @@ export default function LabPage() {
   const gearModels: ModelItem[] = [
     {
       url: "/lab/grips.glb",
-      name: "Gym Grips",
-      description: "Gym grips for better grip strength and protection",
+      name: "Pro",
+      description: "Versa Gripps",
       rotationAxis: "xy",
       rotationSpeed: 0.007
     },
     {
       url: "/lab/belt.glb",
-      name: "Weight Lifting Belt",
-      description: "Provides support for heavy lifts",
+      name: "5-inch Form Core",
+      description: "Harbinger",
       rotationAxis: "xz",
       rotationSpeed: 0.005
     }
