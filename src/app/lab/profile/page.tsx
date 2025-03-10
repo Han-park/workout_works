@@ -1,12 +1,11 @@
 'use client'
 
-import { useState, useEffect, Suspense } from 'react'
+import { useState, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
 import Header from '@/components/Header'
 import { supabase } from '@/lib/supabase'
 import Image from 'next/image'
 import { useAuth } from '@/contexts/AuthContext'
-import dynamic from 'next/dynamic'
 import { 
   MixerHorizontalIcon, 
   PersonIcon, 
@@ -16,68 +15,16 @@ import {
   HomeIcon, 
   CheckCircledIcon,
   BackpackIcon,
-  MixerVerticalIcon,
-  ReloadIcon
+  MixerVerticalIcon
 } from '@radix-ui/react-icons'
-
-// Define the model item type
-type RotationConfig = {
-  x?: number;
-  y?: number;
-  z?: number;
-}
-
-type ModelItem = {
-  url: string;
-  name: string;
-  description?: string;
-  rotationAxis?: 'x' | 'y' | 'z' | 'xy' | 'xz' | 'yz' | 'xyz';
-  rotationSpeed?: number;
-  rotationConfig?: RotationConfig;
-}
-
-// Define error and measurement types
-type ApiError = {
-  message: string;
-  code?: string;
-}
-
-type ProfileData = {
-  UID: string;
-  display_name?: string;
-  avatar_url?: string;
-  created_at: string;
-  [key: string]: any;
-}
-
-type MeasurementData = {
-  weight: number;
-  percent_body_fat: number;
-  skeletal_muscle_mass: number;
-  bmi: number;
-  created_at: string;
-  [key: string]: any;
-}
-
-// Dynamically import the ModelGrid component to avoid SSR issues
-const ModelGrid = dynamic(() => import('@/components/ModelGrid'), {
-  ssr: false,
-  loading: () => (
-    <div className="flex justify-center items-center h-[200px] bg-[#222222] rounded-lg">
-      <div className="animate-spin text-[#D8110A]">
-        <ReloadIcon className="w-8 h-8" />
-      </div>
-    </div>
-  )
-})
 
 export default function LabPage() {
   const { user } = useAuth()
   const router = useRouter()
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
-  const [targetUser, setTargetUser] = useState<ProfileData | null>(null)
-  const [latestMeasurements, setLatestMeasurements] = useState<MeasurementData | null>(null)
+  const [targetUser, setTargetUser] = useState<any>(null)
+  const [latestMeasurements, setLatestMeasurements] = useState<any>(null)
   
   // Target UID from the request
   const targetUID = '19a286a9-e5c8-4571-921f-db3712f49927'
@@ -104,7 +51,7 @@ export default function LabPage() {
         
         // Fetch latest measurements - try both table names to ensure we get data
         let measurementsData = null;
-        let measurementsError: ApiError | null = null;
+        let measurementsError = null;
         
         // Try 'metric' table first
         const metricResult = await supabase
@@ -137,12 +84,11 @@ export default function LabPage() {
           console.error('Error fetching measurements:', measurementsError);
         }
         
-        setTargetUser(profileData as ProfileData)
-        setLatestMeasurements(measurementsData as MeasurementData | null)
-      } catch (err: unknown) {
-        const errorMessage = err instanceof Error ? err.message : 'Failed to load user data'
-        console.error('Error fetching user data:', err)
-        setError(errorMessage)
+        setTargetUser(profileData)
+        setLatestMeasurements(measurementsData || null)
+      } catch (error: any) {
+        console.error('Error fetching user data:', error)
+        setError(error.message || 'Failed to load user data')
       } finally {
         setLoading(false)
       }
@@ -162,13 +108,13 @@ export default function LabPage() {
     )
   }
 
-  if (error || !targetUser) {
+  if (error) {
     return (
       <div>
         <Header />
         <div className="p-4 max-w-md mx-auto mt-8">
           <div className="bg-red-900/30 border border-red-800 rounded-lg p-4 text-white">
-            <p>Error: {error || 'User not found'}</p>
+            <p>Error: {error}</p>
             <button 
               onClick={() => router.push('/')}
               className="mt-4 px-4 py-2 bg-[#D8110A] text-white rounded-md hover:bg-red-700 transition-colors"
@@ -194,55 +140,6 @@ export default function LabPage() {
     "Gymboxx 건대입구점",
     "Gymboxx 어린이대공원점"
   ];
-  
-  // Gear models data
-  const gearModels: ModelItem[] = [
-    {
-      url: "/lab/grips.glb",
-      name: "Gym Grips",
-      description: "Gym grips for better grip strength and protection",
-      rotationAxis: "xy",
-      rotationSpeed: 0.007
-    },
-    {
-      url: "/lab/belt.glb",
-      name: "Weight Lifting Belt",
-      description: "Provides support for heavy lifts",
-      rotationAxis: "xz",
-      rotationSpeed: 0.005
-    }
-  ];
-  
-  // Supplement models data
-  const supplementModels: ModelItem[] = [
-    {
-      url: "/lab/protein.glb",
-      name: "Platinum Hydrowhey",
-      description: "Optimum Nutrition",
-      rotationAxis: "yz",
-      rotationSpeed: 0.006
-    },
-    {
-      url: "/lab/creatine.glb",
-      name: "Creatine1000",
-      description: "Evolution Nutrition",
-      rotationAxis: "xyz",
-      rotationSpeed: 0.004,
-      // Custom rotation configuration for more complex motion
-      rotationConfig: {
-        x: 0.003,
-        y: 0.005,
-        z: 0.002
-      }
-    },
-    {
-      url: "/lab/calcium.glb",
-      name: "Calcium Magnesium Plus Zinc Tablets",
-      description: "Solgar",
-      rotationAxis: "xyz",
-      rotationSpeed: 0.008
-    }
-  ];
 
   return (
     <div>
@@ -253,23 +150,24 @@ export default function LabPage() {
         </h1>
         
         {/* User Profile Card */}
-        <div className="bg-[#1A1A1A] rounded-lg p-4 mb-6 border border-gray-800">
+        <div className="rounded-lg p-4 mb-6">
           <div className="flex items-center mb-2">
             {targetUser.avatar_url ? (
               <Image
                 src={targetUser.avatar_url}
                 alt={targetUser.display_name || 'User'}
-                width={60}
-                height={60}
+                width={80}
+                height={80}
                 className="rounded-full object-cover aspect-square"
               />
             ) : (
-              <div className="w-[60px] h-[60px] rounded-full bg-gray-800 flex items-center justify-center">
+              <div className="w-[80px] h-[80px] rounded-full bg-gray-800 flex items-center justify-center">
                 <PersonIcon className="w-8 h-8 text-gray-400" />
               </div>
             )}
-            <div className="ml-4">
-              <h2 className="text-xl font-semibold text-white">{targetUser.display_name || 'User'}</h2>
+            <div className="ml-4 flex flex-col gap-1">
+              <h2 className="text-2xl font-semibold text-white">{targetUser.display_name || 'User'}</h2>
+              <p className='text-gray-400 text-normal'>founder of CFP</p>
               <p className="text-gray-400 text-sm flex items-center">
                 <ClockIcon className="w-4 h-4 mr-1" />
                 Member since {new Date(targetUser.created_at).toLocaleDateString()}
@@ -321,9 +219,9 @@ export default function LabPage() {
             </div>
           </div>
           <p className="text-gray-400 text-sm flex items-center">
-            <InfoCircledIcon className="w-4 h-4 mr-1" />
-            Estimated 1RM according to the Epley formula
-          </p>
+          <InfoCircledIcon className="w-4 h-4 mr-1" />
+                Estimated 1RM according to the Epley formula
+              </p>
         </div>
         
         {/* Gears Card */}
@@ -333,20 +231,9 @@ export default function LabPage() {
             Gears
           </h2>
           
-          <Suspense fallback={
-            <div className="flex justify-center items-center h-[200px] bg-[#222222] rounded-lg">
-              <div className="animate-spin text-[#D8110A]">
-                <ReloadIcon className="w-8 h-8" />
-              </div>
-            </div>
-          }>
-            <ModelGrid models={gearModels} itemHeight={200} />
-          </Suspense>
-          
-          <p className="text-gray-400 text-sm mt-3 flex items-center">
-            <InfoCircledIcon className="w-4 h-4 mr-1" />
-            Essential gear for optimal performance
-          </p>
+          <div className="bg-[#222222] p-4 rounded-lg text-gray-400 text-center">
+            No gear information available
+          </div>
         </div>
         
         {/* Nutrient Supplements Card */}
@@ -356,20 +243,9 @@ export default function LabPage() {
             Nutrient Supplements
           </h2>
           
-          <Suspense fallback={
-            <div className="flex justify-center items-center h-[200px] bg-[#222222] rounded-lg">
-              <div className="animate-spin text-[#D8110A]">
-                <ReloadIcon className="w-8 h-8" />
-              </div>
-            </div>
-          }>
-            <ModelGrid models={supplementModels} itemHeight={200} />
-          </Suspense>
-          
-          <p className="text-gray-400 text-sm mt-3 flex items-center">
-            <InfoCircledIcon className="w-4 h-4 mr-1" />
-            Supplements to support training and recovery
-          </p>
+          <div className="bg-[#222222] p-4 rounded-lg text-gray-400 text-center">
+            No supplement information available
+          </div>
         </div>
         
         {/* Latest Measurements Card */}
