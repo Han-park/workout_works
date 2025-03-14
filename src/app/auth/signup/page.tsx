@@ -53,6 +53,7 @@ export default function SignUpPage() {
       await signUp(email, password)
       setMessage('Check your email to confirm your account!')
       showToast('Account created! Check your email for confirmation.', 'success')
+      router.push('/auth/signin')
     } catch (error) {
       const errorMessage = error instanceof Error ? error.message : 'An error occurred'
       setError(errorMessage)

@@ -1,7 +1,7 @@
 // Create a new file for auth utilities
 
 // Simple debounce function for auth requests
-export const debounce = <F extends (...args: any[]) => any>(
+export const debounce = <F extends (...args: Parameters<F>) => ReturnType<F>>(
   func: F,
   waitFor: number
 ) => {

@@ -77,7 +77,7 @@ const formatDateForDB = (date: Date) => {
 
 export default function GraphPage() {
   const { user } = useAuth()
-  const { viewedUser, isViewingSelf } = useViewedUser()
+  const { viewedUser, isViewingSelf, loading: userLoading } = useViewedUser()
   const router = useRouter()
   const [metrics, setMetrics] = useState<Metric[]>([])
   const [goals, setGoals] = useState<Goal>({ skeletal_muscle_mass: 0, percent_body_fat: 0 })

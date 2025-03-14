@@ -1,14 +1,13 @@
 'use client'
 
-import { AuthProvider } from "@/contexts/AuthContext";
-import { ViewedUserProvider } from "@/contexts/ViewedUserContext";
-
-export default function ClientLayout({ children }: { children: React.ReactNode }) {
+export default function ClientLayout({
+  children,
+}: {
+  children: React.ReactNode
+}) {
   return (
-    <AuthProvider>
-      <ViewedUserProvider>
-        {children}
-      </ViewedUserProvider>
-    </AuthProvider>
+    <div className="min-h-screen bg-black text-white">
+      {children}
+    </div>
   );
 } 

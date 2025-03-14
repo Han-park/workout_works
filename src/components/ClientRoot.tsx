@@ -20,6 +20,8 @@ export default function ClientRoot({ children }: ClientRootProps) {
   
   // Add a ref to track if we've already redirected
   const hasRedirected = useRef(false)
+  // Add a ref to track the last pathname
+  const lastPathname = useRef(pathname)
 
   useEffect(() => {
     if (user && !loading) {
@@ -33,8 +35,12 @@ export default function ClientRoot({ children }: ClientRootProps) {
   }, [user, loading])
 
   useEffect(() => {
-    // Skip if we're still loading or already redirected
-    if (loading || hasRedirected.current) return;
+    // Skip if we're still loading or already redirected for this pathname
+    if (loading || hasRedirected.current || lastPathname.current !== pathname) {
+      lastPathname.current = pathname;
+      hasRedirected.current = false;
+      return;
+    }
     
     const isProtectedRoute = protectedRoutes.some(route => pathname.startsWith(route))
     const isPublicPath = publicPaths.includes(pathname)
@@ -47,18 +53,24 @@ export default function ClientRoot({ children }: ClientRootProps) {
     } else if (user && isPublicPath && pathname !== '/' && !hasRedirected.current) {
       console.log('Redirecting authenticated user to home')
       hasRedirected.current = true;
-      router.push('/')
+      router.push('/graph')
     }
   }, [user, loading, pathname, router])
 
   // Reset the redirect flag when the pathname changes
   useEffect(() => {
-    hasRedirected.current = false;
+    if (lastPathname.current !== pathname) {
+      console.log(`Pathname changed from ${lastPathname.current} to ${pathname}`);
+      lastPathname.current = pathname;
+      hasRedirected.current = false;
+    }
   }, [pathname]);
 
   // Show loading state while checking auth
   if (loading) {
-    return <div>Loading...</div>
+    return <div className="flex items-center justify-center min-h-screen">
+      <div className="text-white">Loading...</div>
+    </div>
   }
 
   // For protected routes, don't render until we have a user
@@ -67,12 +79,15 @@ export default function ClientRoot({ children }: ClientRootProps) {
     return null
   }
 
+  // Check if we should show the bottom nav (only for authenticated users on protected routes)
+  const showBottomNav = user && isProtectedRoute;
+
   return (
     <ClientLayout>
-      <main className="pb-16">
+      <main className={showBottomNav ? "pb-16" : ""}>
         {children}
       </main>
-      {user && <BottomNav />}
+      {showBottomNav && <BottomNav />}
     </ClientLayout>
   )
 } 

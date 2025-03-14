@@ -7,23 +7,23 @@ const PUBLIC_ROUTES = ['/auth/signin', '/auth/signup', '/auth/callback', '/', '/
 
 export async function middleware(request: NextRequest) {
   const response = NextResponse.next()
+  
+  // Get the pathname from the request
+  const { pathname } = request.nextUrl
+  
+  // Skip auth check for public routes
+  if (PUBLIC_ROUTES.includes(pathname)) {
+    return response
+  }
+  
   const supabase = createMiddlewareClient({ req: request, res: response })
   
   // Check if we have a session
   const { data: { session } } = await supabase.auth.getSession()
   
-  // Get the pathname from the request
-  const { pathname } = request.nextUrl
-  
   // If no session and not a public route, redirect to sign in
-  if (!session && !PUBLIC_ROUTES.includes(pathname)) {
+  if (!session) {
     const redirectUrl = new URL('/auth/signin', request.url)
-    return NextResponse.redirect(redirectUrl)
-  }
-  
-  // If we have a session and we're on a sign-in page, redirect to graph
-  if (session && pathname === '/auth/signin') {
-    const redirectUrl = new URL('/graph', request.url)
     return NextResponse.redirect(redirectUrl)
   }
   

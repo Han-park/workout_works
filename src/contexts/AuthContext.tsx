@@ -1,9 +1,10 @@
 'use client'
 
 import { createContext, useContext, useEffect, useState, useRef } from 'react'
-import { User } from '@supabase/supabase-js'
+import { User, Session, WeakPassword } from '@supabase/supabase-js'
 import { createClientComponentClient } from '@supabase/auth-helpers-nextjs'
 import { useRouter } from 'next/navigation'
+import { trackAuthRequest } from '@/utils/debugUtils'
 
 interface AuthContextType {
   user: User | null
@@ -27,6 +28,10 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   
   // Add a ref to track if we've already initialized
   const initialized = useRef(false)
+  // Add a ref to track auth requests
+  const authRequestCount = useRef(0)
+  // Add a timestamp for last auth request
+  const lastAuthRequest = useRef(Date.now())
 
   useEffect(() => {
     // Prevent multiple initializations
@@ -34,6 +39,19 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     
     const initializeAuth = async () => {
       try {
+        // Track this auth request
+        const requestNum = trackAuthRequest('initializeAuth');
+        console.log(`Auth request #${requestNum}`);
+        
+        // Throttle auth requests
+        const now = Date.now();
+        if (now - lastAuthRequest.current < 1000) {
+          console.log('Throttling auth request');
+          return;
+        }
+        
+        lastAuthRequest.current = now;
+        
         const { data: { session } } = await supabase.auth.getSession()
         if (session?.user) {
           console.log('Logged in user ID:', session.user.id)
@@ -56,6 +74,10 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     const {
       data: { subscription },
     } = supabase.auth.onAuthStateChange(async (_event, session) => {
+      // Track this auth state change
+      const requestNum = trackAuthRequest('onAuthStateChange');
+      console.log(`Auth state change #${requestNum}`);
+      
       if (session?.user) {
         console.log('Auth state changed - User ID:', session.user.id)
         setUser(session.user)
@@ -72,18 +94,39 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     }
   }, [supabase]) // Remove router from dependencies
 
-  const signInWithEmail = async (email: string) => {
+  const signInWithEmail = async (email: string): Promise<void> => {
+    // Throttle sign-in requests
+    const now = Date.now();
+    if (now - lastAuthRequest.current < 1000) {
+      throw new Error('Please wait before trying again');
+    }
+    
+    lastAuthRequest.current = now;
+    console.log(`Attempting to sign in with email: ${email.substring(0, 3)}...`);
+    
     const { error } = await supabase.auth.signInWithOtp({
       email,
       options: {
         emailRedirectTo: `${window.location.origin}/auth/callback`,
       },
     })
-    if (error) throw error
+    if (error) {
+      console.error(`Sign in error: ${error.message}`);
+      throw error;
+    }
+    console.log('Magic link sent successfully');
   }
 
-  const signInWithPassword = async (email: string, password: string) => {
+  const signInWithPassword = async (email: string, password: string): Promise<void> => {
+    // Throttle sign-in requests
+    const now = Date.now();
+    if (now - lastAuthRequest.current < 1000) {
+      throw new Error('Please wait before trying again');
+    }
+    
+    lastAuthRequest.current = now;
     console.log(`Attempting to sign in with password for email: ${email.substring(0, 3)}...`);
+    
     const { error } = await supabase.auth.signInWithPassword({
       email,
       password,
@@ -95,12 +138,21 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     console.log('Sign in successful');
   }
 
-  const signUp = async (email: string, password: string) => {
+  const signUp = async (email: string, password: string): Promise<void> => {
     // Validate password length
     if (password.length < 8) {
       throw new Error('Password must be at least 8 characters long')
     }
 
+    // Throttle sign-up requests
+    const now = Date.now();
+    if (now - lastAuthRequest.current < 1000) {
+      throw new Error('Please wait before trying again');
+    }
+    
+    lastAuthRequest.current = now;
+    console.log(`Attempting to sign up with email: ${email.substring(0, 3)}...`);
+    
     const { error } = await supabase.auth.signUp({
       email,
       password,
@@ -108,23 +160,52 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         emailRedirectTo: `${window.location.origin}/auth/callback`,
       },
     })
-    if (error) throw error
+    if (error) {
+      console.error(`Sign up error: ${error.message}`);
+      throw error;
+    }
+    console.log('Sign up successful');
   }
 
-  const updatePassword = async (password: string) => {
+  const updatePassword = async (password: string): Promise<void> => {
+    // Throttle password update requests
+    const now = Date.now();
+    if (now - lastAuthRequest.current < 1000) {
+      throw new Error('Please wait before trying again');
+    }
+    
+    lastAuthRequest.current = now;
+    console.log('Attempting to update password');
+    
     const { error } = await supabase.auth.updateUser({
       password: password
     })
     
-    if (error) throw error
+    if (error) {
+      console.error(`Update password error: ${error.message}`);
+      throw error;
+    }
+    console.log('Password updated successfully');
   }
 
-  const updateProfile = async (data: { display_name?: string, avatar_url?: string }) => {
+  const updateProfile = async (data: { display_name?: string, avatar_url?: string }): Promise<void> => {
+    // Throttle profile update requests
+    const now = Date.now();
+    if (now - lastAuthRequest.current < 1000) {
+      throw new Error('Please wait before trying again');
+    }
+    
+    lastAuthRequest.current = now;
+    console.log('Attempting to update profile');
+    
     const { error } = await supabase.auth.updateUser({
       data: data
     })
     
-    if (error) throw error
+    if (error) {
+      console.error(`Update profile error: ${error.message}`);
+      throw error;
+    }
     
     // Update the local user state with the new metadata
     if (user) {
@@ -136,11 +217,21 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         }
       })
     }
+    console.log('Profile updated successfully');
   }
 
-  const updateGoals = async (data: { goal_muscle_mass: number, goal_body_fat: number }) => {
+  const updateGoals = async (data: { goal_muscle_mass: number, goal_body_fat: number }): Promise<void> => {
     if (!user) throw new Error('No user found')
 
+    // Throttle goal update requests
+    const now = Date.now();
+    if (now - lastAuthRequest.current < 1000) {
+      throw new Error('Please wait before trying again');
+    }
+    
+    lastAuthRequest.current = now;
+    console.log('Attempting to update goals');
+    
     const { error } = await supabase
       .from('goal')
       .insert([{
@@ -149,16 +240,33 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         UID: user.id
       }])
     
-    if (error) throw error
+    if (error) {
+      console.error(`Update goals error: ${error.message}`);
+      throw error;
+    }
+    console.log('Goals updated successfully');
   }
 
-  const signOut = async () => {
+  const signOut = async (): Promise<void> => {
+    // Throttle sign-out requests
+    const now = Date.now();
+    if (now - lastAuthRequest.current < 1000) {
+      throw new Error('Please wait before trying again');
+    }
+    
+    lastAuthRequest.current = now;
+    console.log('Attempting to sign out');
+    
     const { error } = await supabase.auth.signOut()
-    if (error) throw error
+    if (error) {
+      console.error(`Sign out error: ${error.message}`);
+      throw error;
+    }
+    console.log('Sign out successful');
     router.push('/')
   }
 
-  const value = {
+  const value: AuthContextType = {
     user,
     loading,
     signInWithEmail,
