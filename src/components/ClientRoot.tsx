@@ -4,7 +4,7 @@ import { useAuth } from '@/contexts/AuthContext'
 import { useRouter, usePathname } from 'next/navigation'
 import BottomNav from "@/components/BottomNav"
 import ClientLayout from "@/components/ClientLayout"
-import { useEffect } from 'react'
+import { useEffect, useRef } from 'react'
 
 interface ClientRootProps {
   children: React.ReactNode
@@ -17,6 +17,9 @@ export default function ClientRoot({ children }: ClientRootProps) {
   const { user, loading } = useAuth()
   const router = useRouter()
   const pathname = usePathname()
+  
+  // Add a ref to track if we've already redirected
+  const hasRedirected = useRef(false)
 
   useEffect(() => {
     if (user && !loading) {
@@ -30,19 +33,28 @@ export default function ClientRoot({ children }: ClientRootProps) {
   }, [user, loading])
 
   useEffect(() => {
+    // Skip if we're still loading or already redirected
+    if (loading || hasRedirected.current) return;
+    
     const isProtectedRoute = protectedRoutes.some(route => pathname.startsWith(route))
     const isPublicPath = publicPaths.includes(pathname)
 
-    if (!loading) {
-      if (!user && isProtectedRoute) {
-        console.log('Redirecting to signin from protected route:', pathname)
-        router.push(`/auth/signin?redirectTo=${encodeURIComponent(pathname)}`)
-      } else if (user && isPublicPath && pathname !== '/') {
-        console.log('Redirecting authenticated user to home')
-        router.push('/')
-      }
+    // Add a check to prevent redirect loops
+    if (!user && isProtectedRoute && !pathname.includes('/auth/signin')) {
+      console.log('Redirecting to signin from protected route:', pathname)
+      hasRedirected.current = true;
+      router.push(`/auth/signin?redirectTo=${encodeURIComponent(pathname)}`)
+    } else if (user && isPublicPath && pathname !== '/' && !hasRedirected.current) {
+      console.log('Redirecting authenticated user to home')
+      hasRedirected.current = true;
+      router.push('/')
     }
   }, [user, loading, pathname, router])
+
+  // Reset the redirect flag when the pathname changes
+  useEffect(() => {
+    hasRedirected.current = false;
+  }, [pathname]);
 
   // Show loading state while checking auth
   if (loading) {

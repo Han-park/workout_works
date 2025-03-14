@@ -130,8 +130,8 @@ export default function ProfilePage() {
     setPasswordLoading(true)
 
     // Validate password
-    if (password.length < 6) {
-      setPasswordError('Password must be at least 6 characters long')
+    if (password.length < 8) {
+      setPasswordError('Password must be at least 8 characters long')
       setPasswordLoading(false)
       return
     }
@@ -394,7 +394,7 @@ export default function ProfilePage() {
                     onChange={(e) => setPassword(e.target.value)}
                     className="w-full pl-10 pr-3 py-2 bg-[#1a1a1a] border border-gray-800 rounded-md text-white focus:outline-none focus:ring-2 focus:ring-[#D8110A]"
                     placeholder="Enter new password"
-                    minLength={6}
+                    minLength={8}
                   />
                 </div>
               </div>
@@ -412,7 +412,7 @@ export default function ProfilePage() {
                     onChange={(e) => setConfirmPassword(e.target.value)}
                     className="w-full pl-10 pr-3 py-2 bg-[#1a1a1a] border border-gray-800 rounded-md text-white focus:outline-none focus:ring-2 focus:ring-[#D8110A]"
                     placeholder="Confirm new password"
-                    minLength={6}
+                    minLength={8}
                   />
                 </div>
               </div>

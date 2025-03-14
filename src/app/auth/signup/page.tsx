@@ -6,16 +6,15 @@ import { useRouter } from 'next/navigation'
 import { EnvelopeClosedIcon, LockClosedIcon } from '@radix-ui/react-icons'
 import Toast, { ToastType } from '@/components/Toast'
 import Link from 'next/link'
-import { debouncedSignIn } from '@/utils/authUtils'
 
-export default function SignInPage() {
+export default function SignUpPage() {
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
+  const [confirmPassword, setConfirmPassword] = useState('')
   const [error, setError] = useState<string | null>(null)
   const [loading, setLoading] = useState(false)
   const [message, setMessage] = useState<string | null>(null)
-  const [usePassword, setUsePassword] = useState(true)
-  const { signInWithEmail, signInWithPassword } = useAuth()
+  const { signUp } = useAuth()
   const router = useRouter()
   
   // Toast state
@@ -30,37 +29,34 @@ export default function SignInPage() {
     setToastVisible(true)
   }
 
-  // Redirect is now handled by middleware
-  // No need for the useEffect redirect here
-
   const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault()
     setError(null)
     setMessage(null)
     setLoading(true)
 
+    // Validate password
+    if (password.length < 8) {
+      setError('Password must be at least 8 characters long')
+      setLoading(false)
+      return
+    }
+
+    if (password !== confirmPassword) {
+      setError('Passwords do not match')
+      setLoading(false)
+      return
+    }
+
     try {
-      if (usePassword) {
-        showToast('Signing in with password...', 'info')
-        await debouncedSignIn(signInWithPassword, email, password)
-        showToast('Sign in successful! Redirecting...', 'success')
-        router.push('/graph')
-      } else {
-        showToast('Sending magic link...', 'info')
-        await signInWithEmail(email)
-        setMessage('Check your email for the magic link!')
-        showToast('Magic link sent! Check your email.', 'success')
-      }
+      showToast('Creating your account...', 'info')
+      await signUp(email, password)
+      setMessage('Check your email to confirm your account!')
+      showToast('Account created! Check your email for confirmation.', 'success')
     } catch (error) {
       const errorMessage = error instanceof Error ? error.message : 'An error occurred'
-      
-      if (errorMessage.includes('429') || errorMessage.toLowerCase().includes('too many requests')) {
-        setError('Too many sign-in attempts. Please wait a few minutes before trying again.')
-        showToast('Rate limit exceeded. Please try again later.', 'error')
-      } else {
-        setError(errorMessage)
-        showToast(errorMessage, 'error')
-      }
+      setError(errorMessage)
+      showToast(errorMessage, 'error')
     } finally {
       setLoading(false)
     }
@@ -70,35 +66,10 @@ export default function SignInPage() {
     <div className="min-h-screen bg-black text-white flex flex-col items-center justify-center p-4">
       <div className="w-full max-w-md space-y-8">
         <div className="text-center">
-          <h2 className="text-3xl font-bold">Sign In</h2>
+          <h2 className="text-3xl font-bold">Create an Account</h2>
           <p className="mt-4 text-white/60">
-            {usePassword ? 'Sign in with your email and password' : 'Sign in with magic link'}
+            Sign up with your email and password
           </p>
-        </div>
-
-        <div className="flex justify-center space-x-2 mb-6">
-          <button
-            type="button"
-            onClick={() => setUsePassword(true)}
-            className={`py-2 px-4 rounded-md transition-colors ${
-              usePassword 
-                ? 'bg-[#D8110A] text-white' 
-                : 'bg-transparent border border-gray-800 text-white/60'
-            }`}
-          >
-            Password
-          </button>
-          <button
-            type="button"
-            onClick={() => setUsePassword(false)}
-            className={`py-2 px-4 rounded-md transition-colors ${
-              !usePassword 
-                ? 'bg-[#D8110A] text-white' 
-                : 'bg-transparent border border-gray-800 text-white/60'
-            }`}
-          >
-            Magic Link
-          </button>
         </div>
 
         <form onSubmit={handleSubmit} className="mt-8 space-y-6">
@@ -121,30 +92,43 @@ export default function SignInPage() {
               </div>
             </div>
 
-            {usePassword && (
-              <div>
-                <label htmlFor="password" className="block text-sm font-medium text-white/90">
-                  Password
-                </label>
-                <div className="mt-1 relative">
-                  <LockClosedIcon className="absolute left-3 top-1/2 -translate-y-1/2 text-white/60 w-5 h-5" />
-                  <input
-                    id="password"
-                    type="password"
-                    required={usePassword}
-                    value={password}
-                    onChange={(e) => setPassword(e.target.value)}
-                    className="w-full pl-10 pr-3 py-2 bg-[#1a1a1a] border border-gray-800 rounded-md text-white focus:outline-none focus:ring-2 focus:ring-[#D8110A]"
-                    placeholder="Enter your password"
-                  />
-                </div>
-                <div className="flex justify-end mt-1">
-                  <Link href="#" className="text-sm text-[#D8110A] hover:underline">
-                    Forgot password?
-                  </Link>
-                </div>
+            <div>
+              <label htmlFor="password" className="block text-sm font-medium text-white/90">
+                Password
+              </label>
+              <div className="mt-1 relative">
+                <LockClosedIcon className="absolute left-3 top-1/2 -translate-y-1/2 text-white/60 w-5 h-5" />
+                <input
+                  id="password"
+                  type="password"
+                  required
+                  value={password}
+                  onChange={(e) => setPassword(e.target.value)}
+                  className="w-full pl-10 pr-3 py-2 bg-[#1a1a1a] border border-gray-800 rounded-md text-white focus:outline-none focus:ring-2 focus:ring-[#D8110A]"
+                  placeholder="Enter your password"
+                  minLength={8}
+                />
               </div>
-            )}
+            </div>
+
+            <div>
+              <label htmlFor="confirmPassword" className="block text-sm font-medium text-white/90">
+                Confirm Password
+              </label>
+              <div className="mt-1 relative">
+                <LockClosedIcon className="absolute left-3 top-1/2 -translate-y-1/2 text-white/60 w-5 h-5" />
+                <input
+                  id="confirmPassword"
+                  type="password"
+                  required
+                  value={confirmPassword}
+                  onChange={(e) => setConfirmPassword(e.target.value)}
+                  className="w-full pl-10 pr-3 py-2 bg-[#1a1a1a] border border-gray-800 rounded-md text-white focus:outline-none focus:ring-2 focus:ring-[#D8110A]"
+                  placeholder="Confirm your password"
+                  minLength={8}
+                />
+              </div>
+            </div>
           </div>
 
           <div className="space-y-4">
@@ -153,7 +137,7 @@ export default function SignInPage() {
               disabled={loading}
               className="w-full py-2 px-4 bg-[#D8110A] text-white rounded-md hover:bg-opacity-90 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
             >
-              {loading ? 'Loading...' : usePassword ? 'Sign in' : 'Send magic link'}
+              {loading ? 'Loading...' : 'Sign Up'}
             </button>
           </div>
         </form>
@@ -172,9 +156,9 @@ export default function SignInPage() {
 
         <div className="text-center mt-4">
           <p className="text-white/60">
-            Don't have an account?{' '}
-            <Link href="/auth/signup" className="text-[#D8110A] hover:underline">
-              Sign up
+            Already have an account?{' '}
+            <Link href="/auth/signin" className="text-[#D8110A] hover:underline">
+              Sign in
             </Link>
           </p>
         </div>

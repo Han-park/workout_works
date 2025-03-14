@@ -3,7 +3,7 @@ const MiniCssExtractPlugin = require('mini-css-extract-plugin')
 
 const nextConfig = {
   images: {
-    domains: ['aanrnidkotzgpaeukxvd.supabase.co']
+    domains: ['aanrnidkotzgpaeukxvd.supabase.co', 'randomuser.me']
   },
   webpack: (config, { isServer }) => {
     if (!isServer) {

@@ -1,6 +1,6 @@
 'use client'
 
-import { createContext, useContext, useEffect, useState } from 'react'
+import { createContext, useContext, useEffect, useState, useRef } from 'react'
 import { User } from '@supabase/supabase-js'
 import { createClientComponentClient } from '@supabase/auth-helpers-nextjs'
 import { useRouter } from 'next/navigation'
@@ -10,6 +10,7 @@ interface AuthContextType {
   loading: boolean
   signInWithEmail: (email: string) => Promise<void>
   signInWithPassword: (email: string, password: string) => Promise<void>
+  signUp: (email: string, password: string) => Promise<void>
   signOut: () => Promise<void>
   updateProfile: (data: { display_name?: string, avatar_url?: string }) => Promise<void>
   updatePassword: (password: string) => Promise<void>
@@ -23,8 +24,14 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [loading, setLoading] = useState(true)
   const router = useRouter()
   const supabase = createClientComponentClient()
+  
+  // Add a ref to track if we've already initialized
+  const initialized = useRef(false)
 
   useEffect(() => {
+    // Prevent multiple initializations
+    if (initialized.current) return;
+    
     const initializeAuth = async () => {
       try {
         const { data: { session } } = await supabase.auth.getSession()
@@ -40,6 +47,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         setUser(null)
       } finally {
         setLoading(false)
+        initialized.current = true;
       }
     }
 
@@ -51,7 +59,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       if (session?.user) {
         console.log('Auth state changed - User ID:', session.user.id)
         setUser(session.user)
-        router.refresh()
+        // Remove router.refresh() to prevent refresh loops
       } else {
         console.log('Auth state changed - Not logged in')
         setUser(null)
@@ -62,7 +70,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     return () => {
       subscription.unsubscribe()
     }
-  }, [router, supabase])
+  }, [supabase]) // Remove router from dependencies
 
   const signInWithEmail = async (email: string) => {
     const { error } = await supabase.auth.signInWithOtp({
@@ -75,9 +83,30 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   }
 
   const signInWithPassword = async (email: string, password: string) => {
+    console.log(`Attempting to sign in with password for email: ${email.substring(0, 3)}...`);
     const { error } = await supabase.auth.signInWithPassword({
       email,
       password,
+    })
+    if (error) {
+      console.error(`Sign in error: ${error.message}`);
+      throw error;
+    }
+    console.log('Sign in successful');
+  }
+
+  const signUp = async (email: string, password: string) => {
+    // Validate password length
+    if (password.length < 8) {
+      throw new Error('Password must be at least 8 characters long')
+    }
+
+    const { error } = await supabase.auth.signUp({
+      email,
+      password,
+      options: {
+        emailRedirectTo: `${window.location.origin}/auth/callback`,
+      },
     })
     if (error) throw error
   }
@@ -134,6 +163,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     loading,
     signInWithEmail,
     signInWithPassword,
+    signUp,
     signOut,
     updateProfile,
     updatePassword,
