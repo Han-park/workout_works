@@ -1,7 +1,7 @@
 'use client'
 
 import { createContext, useContext, useEffect, useState, useRef } from 'react'
-import { User, Session, WeakPassword } from '@supabase/supabase-js'
+import { User } from '@supabase/supabase-js'
 import { createClientComponentClient } from '@supabase/auth-helpers-nextjs'
 import { useRouter } from 'next/navigation'
 import { trackAuthRequest } from '@/utils/debugUtils'
@@ -28,8 +28,6 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   
   // Add a ref to track if we've already initialized
   const initialized = useRef(false)
-  // Add a ref to track auth requests
-  const authRequestCount = useRef(0)
   // Add a timestamp for last auth request
   const lastAuthRequest = useRef(Date.now())
 

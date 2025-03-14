@@ -18,7 +18,7 @@ export const supabase = createClient(supabaseUrl, supabaseAnonKey, {
 // Add a health check function
 export const checkSupabaseConnection = async () => {
   try {
-    const { data, error } = await supabase.from('health_check').select('*').limit(1);
+    const { error } = await supabase.from('health_check').select('*').limit(1);
     
     if (error) {
       console.error('Supabase connection error:', error);

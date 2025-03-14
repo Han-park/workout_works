@@ -39,7 +39,8 @@ export const safeFetch = async (url: string, options?: RequestInit) => {
     try {
       const errorData = JSON.parse(text);
       throw new Error(errorData.message || `Server error: ${response.status} ${response.statusText}`);
-    } catch (e) {
+    // eslint-disable-next-line @typescript-eslint/no-unused-vars
+    } catch (_) {
       // If parsing fails, throw the original error
       throw new Error(`Server error: ${response.status} ${response.statusText}`);
     }
