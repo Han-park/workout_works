@@ -21,6 +21,65 @@ interface Exercise {
   recognition_date?: string
 }
 
+interface MuscleGroupCount {
+  muscleGroup: string;
+  count: number;
+}
+
+// Workout Summary Card Component
+const WorkoutSummaryCard = ({ exercises }: { exercises: Exercise[] }) => {
+  // Calculate total volume of all exercises
+  const calculateTotalWorkoutVolume = (): number => {
+    return exercises.reduce((total, exercise) => {
+      return total + (exercise.total_volume || 0);
+    }, 0);
+  };
+
+  // Count exercises by muscle groups
+  const countExercisesByMuscleGroup = (): MuscleGroupCount[] => {
+    const counts: Record<string, number> = {};
+    
+    exercises.forEach(exercise => {
+      if (exercise.target_muscle_group) {
+        const muscleGroup = exercise.target_muscle_group.toLowerCase();
+        counts[muscleGroup] = (counts[muscleGroup] || 0) + 1;
+      }
+    });
+    
+    // Convert to array and sort by count (descending)
+    return Object.entries(counts)
+      .map(([muscleGroup, count]) => ({ muscleGroup, count }))
+      .sort((a, b) => b.count - a.count);
+  };
+
+  return (
+    <div className="mx-4 mt-4 bg-[#111111] p-4 rounded-lg border border-gray-800">
+      <h2 className="text-lg font-medium text-white/90 mb-3">Workout Summary</h2>
+      
+      <div className="flex flex-col md:flex-row gap-4">
+        {/* Total Volume */}
+        <div className="flex-1">
+          <p className="text-sm text-white/50 mb-1">Total Volume</p>
+          <p className="text-2xl font-bold text-[#D8110A]">{calculateTotalWorkoutVolume()}kg</p>
+        </div>
+        
+        {/* Exercise Count by Muscle Group */}
+        <div className="flex-1">
+          <p className="text-sm text-white/50 mb-1">Exercises by Muscle Group</p>
+          <div className="grid grid-cols-2 gap-x-4 gap-y-1">
+            {countExercisesByMuscleGroup().map(({ muscleGroup, count }) => (
+              <div key={muscleGroup} className="flex justify-between">
+                <span className="text-sm text-white/70 capitalize">{muscleGroup}</span>
+                <span className="text-sm font-medium text-white">{count}</span>
+              </div>
+            ))}
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+};
+
 export default function WorkoutPage() {
   const { user } = useAuth()
   const { viewedUser, isViewingSelf } = useViewedUser()
@@ -377,7 +436,7 @@ export default function WorkoutPage() {
       {!isViewingSelf && viewedUser && (
         <div className="bg-[#2a2a2a] py-2 px-4 text-center">
           <p className="text-sm text-white/70">
-            Viewing <span className="text-white font-medium">{viewedUser.display_name || 'User'}&apos;s</span> workout data. 
+            Viewing <span className="text-white font-medium">{viewedUser?.display_name || 'User'}&apos;s</span> workout data. 
             <span className="text-xs text-[#D8110A] ml-2">(Read-only)</span>
           </p>
         </div>
@@ -405,6 +464,9 @@ export default function WorkoutPage() {
           <ChevronRightIcon className="w-5 h-5" />
         </button>
       </div>
+      
+      {/* Workout Summary Card */}
+      {exercises.length > 0 && <WorkoutSummaryCard exercises={exercises} />}
 
       <div className="flex-1 p-4 space-y-6">
         {/* Add Exercise Form - Only show if viewing own data */}
