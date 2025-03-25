@@ -52,18 +52,28 @@ export default function BodyCompositionChart({ metrics, goals }: BodyComposition
         data: metrics.map(metric => metric.skeletal_muscle_mass),
         borderColor: COLORS.primary,
         backgroundColor: `${COLORS.primary}33`,
-        borderWidth: 2,
+        borderWidth: 0,
+        pointRadius: 4,
+        pointStyle: 'crossRot',
+        pointBackgroundColor: COLORS.primary,
+        pointBorderColor: COLORS.primary,
+        pointBorderWidth: 2,
+        pointHoverRadius: 6,
         yAxisID: 'y',
-        tension: 0.4,
       },
       {
         label: 'Body Fat (%)',
         data: metrics.map(metric => metric.percent_body_fat),
         borderColor: COLORS.secondary,
         backgroundColor: `${COLORS.secondary}33`,
-        borderWidth: 2,
+        borderWidth: 0,
+        pointRadius: 4,
+        pointStyle: 'crossRot',
+        pointBackgroundColor: COLORS.secondary,
+        pointBorderColor: COLORS.secondary,
+        pointBorderWidth: 2,
+        pointHoverRadius: 6,
         yAxisID: 'y1',
-        tension: 0.4,
       },
       {
         label: 'Muscle Mass Goal',
@@ -93,7 +103,6 @@ export default function BodyCompositionChart({ metrics, goals }: BodyComposition
         pointRadius: 0,
         yAxisID: 'y',
         tension: 0.4,
-        borderDash: [2, 2],
       },
       {
         label: 'Body Fat Trend',
@@ -103,7 +112,6 @@ export default function BodyCompositionChart({ metrics, goals }: BodyComposition
         pointRadius: 0,
         yAxisID: 'y1',
         tension: 0.4,
-        borderDash: [2, 2],
       }
     ]
   }
@@ -154,6 +162,9 @@ export default function BodyCompositionChart({ metrics, goals }: BodyComposition
         },
         titleFont: {
           family: 'Inter, system-ui, sans-serif'
+        },
+        filter: (tooltipItem: any) => {
+          return !tooltipItem.dataset.label.includes('Goal');
         }
       }
     },
