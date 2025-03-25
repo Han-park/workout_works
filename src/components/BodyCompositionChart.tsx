@@ -1,5 +1,5 @@
 import { Line } from 'react-chartjs-2'
-import type { LegendItem } from 'chart.js'
+import type { LegendItem, TooltipItem } from 'chart.js'
 
 interface Metric {
   id: number
@@ -163,8 +163,8 @@ export default function BodyCompositionChart({ metrics, goals }: BodyComposition
         titleFont: {
           family: 'Inter, system-ui, sans-serif'
         },
-        filter: (tooltipItem: any) => {
-          return !tooltipItem.dataset.label.includes('Goal');
+        filter: (tooltipItem: TooltipItem<'line'>) => {
+          return !tooltipItem.dataset.label?.includes('Goal');
         }
       }
     },
