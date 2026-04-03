@@ -3,7 +3,7 @@
 import { useState, useEffect } from 'react'
 import Image from 'next/image'
 import { formatDistanceToNow } from 'date-fns'
-import { createClientComponentClient } from '@supabase/auth-helpers-nextjs'
+import { createClient } from '@/lib/supabase-browser'
 
 type ApprovedMember = {
   id: string
@@ -16,7 +16,7 @@ export default function ApprovedMembersList({ approvedUserIds }: { approvedUserI
   const [members, setMembers] = useState<ApprovedMember[]>([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
-  const supabase = createClientComponentClient()
+  const supabase = createClient()
 
   useEffect(() => {
     async function fetchMemberData() {

@@ -1,9 +1,8 @@
 'use client'
 
-import { useState, useEffect, Suspense } from 'react'
+import { useState, Suspense } from 'react'
 import { useRouter } from 'next/navigation'
 import Header from '@/components/Header'
-import { supabase } from '@/lib/supabase'
 import Image from 'next/image'
 import dynamic from 'next/dynamic'
 import { 
@@ -31,11 +30,6 @@ type ModelItem = {
 }
 
 // Define error and measurement types
-type ApiError = {
-  message: string;
-  code?: string;
-}
-
 type ProfileData = {
   UID: string;
   display_name?: string;
@@ -68,83 +62,21 @@ const ModelGrid = dynamic(() => import('@/components/ModelGrid'), {
 export default function LabPage() {
   // We're not using the user anymore since we removed the authentication check
   const router = useRouter()
-  const [loading, setLoading] = useState(true)
-  const [error, setError] = useState<string | null>(null)
-  const [targetUser, setTargetUser] = useState<ProfileData | null>(null)
-  const [latestMeasurements, setLatestMeasurements] = useState<MeasurementData | null>(null)
-  
-  // Target UID from the request
-  const targetUID = '19a286a9-e5c8-4571-921f-db3712f49927'
-
-  useEffect(() => {
-    async function fetchTargetUserData() {
-      try {
-        setLoading(true)
-        
-        // Fetch user profile
-        const { data: profileData, error: profileError } = await supabase
-          .from('profiles')
-          .select('*')
-          .eq('UID', targetUID)
-          .single()
-        
-        if (profileError) {
-          throw profileError
-        }
-        
-        if (!profileData) {
-          throw new Error('User not found')
-        }
-        
-        // Fetch latest measurements - try both table names to ensure we get data
-        let measurementsData = null;
-        let measurementsError: ApiError | null = null;
-        
-        // Try 'metric' table first
-        const metricResult = await supabase
-          .from('metric')
-          .select('*')
-          .eq('UID', targetUID)
-          .order('created_at', { ascending: false })
-          .limit(1)
-          .single();
-          
-        if (!metricResult.error || metricResult.error.code === 'PGRST116') {
-          measurementsData = metricResult.data;
-          measurementsError = metricResult.error;
-        } else {
-          // If 'metric' table fails, try 'measurement' table
-          const measurementResult = await supabase
-            .from('measurement')
-            .select('*')
-            .eq('UID', targetUID)
-            .order('created_at', { ascending: false })
-            .limit(1)
-            .single();
-            
-          measurementsData = measurementResult.data;
-          measurementsError = measurementResult.error;
-        }
-        
-        if (measurementsError && measurementsError.code !== 'PGRST116') {
-          // PGRST116 is the error code for "no rows returned" which is fine if there are no measurements
-          console.error('Error fetching measurements:', measurementsError);
-        }
-        
-        setTargetUser(profileData as ProfileData)
-        setLatestMeasurements(measurementsData as MeasurementData | null)
-      } catch (err: unknown) {
-        const errorMessage = err instanceof Error ? err.message : 'Failed to load user data'
-        console.error('Error fetching user data:', err)
-        setError(errorMessage)
-      } finally {
-        setLoading(false)
-      }
-    }
-    
-    // Fetch data regardless of authentication status
-    fetchTargetUserData()
-  }, [router, targetUID])
+  const [loading] = useState(false)
+  // Use mock data instead of fetching from Supabase
+  const [targetUser] = useState<ProfileData | null>({
+    UID: '19a286a9-e5c8-4571-921f-db3712f49927',
+    display_name: 'Han Park',
+    avatar_url: '', // or provide a mock avatar URL
+    created_at: '2022-01-01T00:00:00.000Z',
+  })
+  const [latestMeasurements] = useState<MeasurementData | null>({
+    weight: 74.5,
+    percent_body_fat: 13.2,
+    skeletal_muscle_mass: 36.1,
+    bmi: 22.8,
+    created_at: '2024-06-01T10:00:00.000Z',
+  })
 
   if (loading) {
     return (
@@ -157,13 +89,13 @@ export default function LabPage() {
     )
   }
 
-  if (error || !targetUser) {
+  if (!targetUser) {
     return (
       <div>
         <Header />
         <div className="p-4 max-w-md mx-auto mt-8">
           <div className="bg-red-900/30 border border-red-800 rounded-lg p-4 text-white">
-            <p>Error: {error || 'User not found'}</p>
+            <p>Error: User not found</p>
             <button 
               onClick={() => router.push('/')}
               className="mt-4 px-4 py-2 bg-[#D8110A] text-white rounded-md hover:bg-red-700 transition-colors"

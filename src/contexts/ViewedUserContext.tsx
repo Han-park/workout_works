@@ -2,7 +2,7 @@
 
 import { createContext, useContext, useState, useEffect } from 'react'
 import { useAuth } from './AuthContext'
-import { createClientComponentClient } from '@supabase/auth-helpers-nextjs'
+import { createClient } from '@/lib/supabase-browser'
 
 // Define the viewed user type
 export type ViewedUser = {
@@ -34,7 +34,7 @@ export function ViewedUserProvider({ children }: { children: React.ReactNode }) 
   const [viewedUserId, setViewedUserId] = useState<string | null>(null)
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
-  const supabase = createClientComponentClient()
+  const supabase = createClient()
 
   // Initialize viewed user to current user
   useEffect(() => {

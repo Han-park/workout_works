@@ -1,5 +1,4 @@
-import { createRouteHandlerClient } from '@supabase/auth-helpers-nextjs'
-import { cookies } from 'next/headers'
+import { createClient } from '@/lib/supabase-server'
 import { NextRequest, NextResponse } from 'next/server'
 
 export async function GET(request: NextRequest) {
@@ -16,15 +15,14 @@ export async function GET(request: NextRequest) {
     }
 
     // Initialize Supabase client
-    const cookieStore = cookies()
-    const supabase = createRouteHandlerClient({ cookies: () => cookieStore })
+    const supabase = await createClient()
 
     // First try to get user metadata from auth.users
     const { data: { user }, error: userError } = await supabase.auth.admin.getUserById(userId)
 
     if (userError) {
       console.error('Error fetching user:', userError.message)
-      
+
       // If we can't get from auth.users, try to get from a custom profiles table if it exists
       try {
         // Try to query a custom profiles table if it exists
@@ -81,4 +79,4 @@ export async function GET(request: NextRequest) {
       { status: 500 }
     )
   }
-} 
+}

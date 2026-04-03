@@ -19,7 +19,7 @@ import {
 import BodyCompositionChart from '@/components/BodyCompositionChart'
 import ProteinIntakeChart from '@/components/ProteinIntakeChart'
 import WorkoutVolumeChart from '@/components/WorkoutVolumeChart'
-import { createClientComponentClient } from '@supabase/auth-helpers-nextjs'
+import { createClient } from '@/lib/supabase-browser'
 
 ChartJS.register(
   CategoryScale,
@@ -90,7 +90,7 @@ export default function GraphPage() {
   const [proteinGoal, setProteinGoal] = useState<number>(160)
   const dialogRef = useRef<HTMLDialogElement>(null)
   const formRef = useRef<HTMLFormElement>(null)
-  const supabase = createClientComponentClient()
+  const supabase = createClient()
 
   const fetchProteinData = useCallback(async (weekDate: Date) => {
     try {

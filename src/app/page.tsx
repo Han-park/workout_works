@@ -1,6 +1,5 @@
 import styles from './styles.module.css' // Import the CSS module
-import { cookies } from 'next/headers'
-import { createServerComponentClient } from '@supabase/auth-helpers-nextjs'
+import { createClient } from '@/lib/supabase-server'
 import ApprovedMembersList from '@/components/ApprovedMembersList'
 
 export const revalidate = 60 // revalidate every minute
@@ -8,8 +7,7 @@ export const revalidate = 60 // revalidate every minute
 // Function to fetch approved user IDs
 async function getApprovedUserIds(): Promise<string[]> {
   try {
-    const cookieStore = cookies()
-    const supabase = createServerComponentClient({ cookies: () => cookieStore })
+    const supabase = await createClient()
     
     // Get all approved user IDs from user_approval table
     const { data: approvedUsers, error: approvalError } = await supabase

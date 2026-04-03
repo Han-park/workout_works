@@ -8,7 +8,7 @@ import { LockClosedIcon, TargetIcon, ImageIcon } from '@radix-ui/react-icons'
 import { supabase } from '@/lib/supabase'
 import Image from 'next/image'
 import { uploadImage } from '@/utils/imageUpload'
-import { createClientComponentClient } from '@supabase/auth-helpers-nextjs'
+import { createClient } from '@/lib/supabase-browser'
 
 export default function ProfilePage() {
   const { user, signOut, updateProfile, updatePassword, updateGoals } = useAuth()
@@ -171,7 +171,7 @@ export default function ProfilePage() {
 
     try {
       // Create authenticated client
-      const supabaseClient = createClientComponentClient()
+      const supabaseClient = createClient()
       
       const { publicUrl, error } = await uploadImage({
         file,

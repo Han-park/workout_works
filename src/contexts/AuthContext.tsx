@@ -2,7 +2,7 @@
 
 import { createContext, useContext, useEffect, useState, useRef } from 'react'
 import { User } from '@supabase/supabase-js'
-import { createClientComponentClient } from '@supabase/auth-helpers-nextjs'
+import { createClient } from '@/lib/supabase-browser'
 import { useRouter } from 'next/navigation'
 import { trackAuthRequest } from '@/utils/debugUtils'
 
@@ -24,7 +24,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [user, setUser] = useState<User | null>(null)
   const [loading, setLoading] = useState(true)
   const router = useRouter()
-  const supabase = createClientComponentClient()
+  const supabase = createClient()
   
   // Add a ref to track if we've already initialized
   const initialized = useRef(false)
