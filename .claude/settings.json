@@ -1,7 +1,10 @@
 {
   "permissions": {
     "allow": [
-      "Bash(node -e \"console.log\\(require\\('./node_modules/next/package.json'\\).version\\)\")"
+      "Bash(node -e \"console.log\\(require\\('./node_modules/next/package.json'\\).version\\)\")",
+      "Bash(sed -i '' \"s/\\\\.from\\('goal'\\)/.from\\('goals'\\)/g\" contexts/AuthContext.tsx app/graph/page.tsx app/profile/page.tsx app/meal/page.tsx)",
+      "Bash(sed -i '' \"s/\\\\.from\\('meal'\\)/.from\\('meals'\\)/g\" app/graph/page.tsx app/meal/page.tsx)",
+      "Bash(sed -i '' \"s/\\\\.from\\('metric'\\)/.from\\('metrics'\\)/g\" app/graph/page.tsx app/meal/page.tsx)"
     ]
   }
 }
