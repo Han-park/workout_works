@@ -122,7 +122,7 @@ export default function WorkoutPage() {
         // Fetch exercises for the viewed user and selected date
         // We'll compare the date part of created_at with the selected date
         const { data: exerciseData, error: exerciseError } = await supabase
-          .from('exercise')
+          .from('exercises')
           .select('*')
           .eq('UID', userId)
           .filter('created_at', 'gte', `${selectedDateStr}T00:00:00`)
@@ -352,7 +352,7 @@ export default function WorkoutPage() {
       recordDate.setHours(now.getHours(), now.getMinutes(), now.getSeconds(), now.getMilliseconds())
       
       const { data, error: insertError } = await supabase
-        .from('exercise')
+        .from('exercises')
         .insert([{
           created_at: recordDate.toISOString(),
           exercise_name: exerciseName,
@@ -400,7 +400,7 @@ export default function WorkoutPage() {
       setDeletingExercise(exerciseId)
       
       const { error } = await supabase
-        .from('exercise')
+        .from('exercises')
         .delete()
         .eq('id', exerciseId)
         .eq('UID', user.id)
