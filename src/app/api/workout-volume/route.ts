@@ -23,7 +23,7 @@ export async function GET(request: Request) {
 
     // Fetch exercises for the date range
     const { data: exerciseData, error: exerciseError } = await supabase
-      .from('exercise')
+      .from('exercises')
       .select('created_at, total_volume')
       .eq('UID', userId)
       .gte('created_at', `${startDate}T00:00:00`)
