@@ -98,7 +98,7 @@ export default function GraphPage() {
       const userId = viewedUser?.id || user?.id || '';
       
       const { data: mealData, error: mealError } = await supabase
-        .from('meal')
+        .from('meals')
         .select('*')
         .eq('UID', userId)
         .gte('recognition_date', formatDateForDB(monday))
@@ -162,7 +162,7 @@ export default function GraphPage() {
       const userId = viewedUser?.id || user?.id || '';
       
       const { data: metricsData, error: metricsError } = await supabase
-        .from('metric')
+        .from('metrics')
         .select('*')
         .eq('UID', userId)
         .order('created_at', { ascending: true });
@@ -187,7 +187,7 @@ export default function GraphPage() {
       
       // Fetch latest goal
       const { data: goalData, error: goalError } = await supabase
-        .from('goal')
+        .from('goals')
         .select('skeletal_muscle_mass, percent_body_fat')
         .eq('UID', userId)
         .order('created_at', { ascending: false })
@@ -201,7 +201,7 @@ export default function GraphPage() {
 
       // Fetch latest weight for protein goal calculation
       const { data: weightData } = await supabase
-        .from('metric')
+        .from('metrics')
         .select('weight')
         .eq('UID', userId)
         .order('created_at', { ascending: false })
@@ -287,7 +287,7 @@ export default function GraphPage() {
 
     try {
       const { data, error: insertError } = await supabase
-        .from('metric')
+        .from('metrics')
         .insert([
           {
             created_at: new Date().toISOString(),

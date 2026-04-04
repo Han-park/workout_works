@@ -1,7 +1,8 @@
 'use client'
 
 import { useEffect, useState, useRef } from 'react'
-import { supabase } from '@/lib/supabase'
+import { createClient } from '@/lib/supabase-browser'
+const supabase = createClient()
 import Header from '@/components/Header'
 import { ChevronLeftIcon, ChevronRightIcon, PlusIcon, MagicWandIcon, InfoCircledIcon } from '@radix-ui/react-icons'
 import * as Tooltip from '@radix-ui/react-tooltip'
@@ -50,7 +51,7 @@ export default function MealPage() {
         
         // Fetch latest weight for the viewed user
         const { data: weightData, error: weightError } = await supabase
-          .from('metric')
+          .from('metrics')
           .select('weight')
           .eq('UID', userId)
           .order('created_at', { ascending: false })
@@ -65,7 +66,7 @@ export default function MealPage() {
         // Fetch foods for the viewed user
         const selectedDateStr = new Date(selectedDate).toISOString().split('T')[0]
         const { data: foodData, error: foodError } = await supabase
-          .from('meal')
+          .from('meals')
           .select('*')
           .eq('UID', userId)
           .eq('recognition_date', selectedDateStr)
@@ -146,7 +147,7 @@ export default function MealPage() {
       const selectedDateStr = new Date(selectedDate).toISOString().split('T')[0]
 
       const { data, error: insertError } = await supabase
-        .from('meal')
+        .from('meals')
         .insert([{
           created_at: new Date().toISOString(),
           recognition_date: selectedDateStr,

@@ -5,7 +5,6 @@ import { useAuth } from '@/contexts/AuthContext'
 import { useRouter } from 'next/navigation'
 import Header from '@/components/Header'
 import { LockClosedIcon, TargetIcon, ImageIcon } from '@radix-ui/react-icons'
-import { supabase } from '@/lib/supabase'
 import Image from 'next/image'
 import { uploadImage } from '@/utils/imageUpload'
 import { createClient } from '@/lib/supabase-browser'
@@ -40,7 +39,7 @@ export default function ProfilePage() {
       async function fetchLatestGoal() {
         try {
           const { data, error } = await supabase
-            .from('goal')
+            .from('goals')
             .select('skeletal_muscle_mass, percent_body_fat')
             .eq('UID', user?.id || '')
             .order('created_at', { ascending: false })

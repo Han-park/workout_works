@@ -231,7 +231,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     console.log('Attempting to update goals');
     
     const { error } = await supabase
-      .from('goal')
+      .from('goals')
       .insert([{
         skeletal_muscle_mass: data.goal_muscle_mass,
         percent_body_fat: data.goal_body_fat,

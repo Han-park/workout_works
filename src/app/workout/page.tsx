@@ -1,7 +1,8 @@
 'use client'
 
 import { useEffect, useState, useRef, useCallback } from 'react'
-import { supabase } from '@/lib/supabase'
+import { createClient } from '@/lib/supabase-browser'
+const supabase = createClient()
 import Header from '@/components/Header'
 import { ChevronLeftIcon, ChevronRightIcon, PlusIcon, MagicWandIcon, TrashIcon } from '@radix-ui/react-icons'
 import { useAuth } from '@/contexts/AuthContext'
